@@ -1,5 +1,5 @@
 import 'source-map-support/register'
-import { User } from '../models/user'
+import { User } from '../entity/user'
 import { client } from '../utils/dynamoDBClient'
 import { createLogger } from '../utils/logger'
 
@@ -33,7 +33,7 @@ export class UserRepository {
 
     /**
     * Check user exists by email
-    * @param username string
+    * @param email string
     * @returns boolean
     */
     async existsByEmail(email: string): Promise<boolean> {
@@ -102,11 +102,11 @@ export class UserRepository {
         await this.docClient.update({
             TableName: this.userTable,
             Key: { username: user.username },
-            UpdateExpression: 'set image = :image, bio = :bio, passwordHash = :passwordHash',
+            UpdateExpression: 'set displayName = :displayName, passwordHash = :passwordHash, updatedAt = :updatedAt',
             ExpressionAttributeValues: {
-                ":image": user.image,
-                ":bio": user.bio,
-                ":passwordHash": user.passwordHash
+                ":displayName": user.displayName,
+                ":passwordHash": user.passwordHash,
+                ":updatedAt": new Date().toISOString()
             }
         }).promise()
     }

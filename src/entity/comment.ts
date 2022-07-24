@@ -1,5 +1,6 @@
 export interface Comment {
-    articleSlug: string
+    commentId: string
+    article: string
     author: string
     message: string
     createdAt: string
