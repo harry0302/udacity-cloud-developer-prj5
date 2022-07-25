@@ -1,4 +1,5 @@
-import { User } from "../entity/user";
+import 'source-map-support/register'
+import { UserSecured } from "../entity/user";
 import { UserRepository } from "../repository/user";
 import { createLogger } from "../utils/logger";
 
@@ -6,8 +7,8 @@ const logger = createLogger('UserService')
 
 const userRepo = new UserRepository()
 
-export async function getUserByUsername(username: string): Promise<User> {
-    logger.info(`Retrieving user by ${username}`)
+export async function getUserByUsername(username: string): Promise<UserSecured> {
+    logger.info(`Retrieving user ${username}`)
 
     return await userRepo.findByUsername(username)
 }

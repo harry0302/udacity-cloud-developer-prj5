@@ -3,7 +3,7 @@ import { Post } from '../entity/post'
 import { client } from '../utils/dynamoDBClient'
 import { createLogger } from '../utils/logger'
 
-const logger = createLogger('postRepository')
+const logger = createLogger('PostRepository')
 
 export class PostRepository {
 
@@ -45,7 +45,11 @@ export class PostRepository {
         const result = await this.docClient.query({
             TableName: this.postTable,
             IndexName: this.postByUserIndex,
-            ScanIndexForward: false
+            ScanIndexForward: false,
+            KeyConditionExpression: 'author = :author',
+            ExpressionAttributeValues: {
+                ':author': author
+            }
         }).promise()
 
         const items = result.Items

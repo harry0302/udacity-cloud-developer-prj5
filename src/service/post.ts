@@ -5,47 +5,31 @@ import { createLogger } from '../utils/logger'
 import { CreatePostRequest } from '../models/createPostRequest'
 import { v4 as uuidv4 } from 'uuid';
 import { UpdatePostRequest } from '../models/updatePostRequest'
-import { UserRepository } from '../repository/user'
-import { emptyUser } from '../entity/user'
 
 const logger = createLogger('postService')
 
 const postRepo = new PostRepository()
-const userRepo = new UserRepository()
 
-export async function getposts(): Promise<Post[]> {
+export async function getPosts(): Promise<Post[]> {
     logger.info("Retrieving all post")
 
     return await postRepo.findAll()
 }
 
-export async function getpostsByAuthor(author: string): Promise<Post[]> {
+export async function getPostsByAuthor(author: string): Promise<Post[]> {
     logger.info(`Retrieving all post by ${author}`)
 
     return await postRepo.findByAuthor(author)
 }
 
 
-export async function getpostById(postId: string): Promise<Post> {
+export async function getPostById(postId: string): Promise<Post> {
     logger.info(`Retrieving post ${postId}`)
 
-    const item = await postRepo.findById(postId)
-  
-    if (!item) {
-        logger.error(`post ${postId} not found`)
-        throw new Error('Item not found')
-    }
-    
-    var user = await userRepo.findByUsername(item.author)
-    
-    if (!user) {
-        user = emptyUser()
-    }
-
-    return item
+    return await postRepo.findById(postId)
 }
 
-export async function createpost(username: string, request: CreatePostRequest): Promise<Post> {
+export async function createPost(username: string, request: CreatePostRequest): Promise<Post> {
     const postId = uuidv4()
     const now = new Date().toISOString()
 
@@ -65,14 +49,14 @@ export async function createpost(username: string, request: CreatePostRequest): 
     return newItem
 }
 
-export async function updatepost(username: string, postId: string, request: UpdatePostRequest): Promise<void> {
+export async function updatePost(username: string, postId: string, request: UpdatePostRequest): Promise<void> {
 
     logger.info(`Updating post ${postId} for user ${username}`, { username, postId, post: request })
 
-    const item = await postRepo.findById(postId)
+    const item = await getPostById(postId)
   
     if (!item) {
-        logger.error(`post ${postId} not found`)
+        logger.error(`Post ${postId} not found`)
         throw new Error('Item not found')
     }
   
@@ -87,13 +71,13 @@ export async function updatepost(username: string, postId: string, request: Upda
     } as Post)
 }
 
-export async function deletepost(username: string, postId: string) {
+export async function deletePost(username: string, postId: string) {
     logger.info(`Deleting todo ${postId} for user ${username}`, { postId, username })
   
-    const item = await postRepo.findById(postId)
+    const item = await getPostById(postId)
   
     if (!item) {
-        logger.error(`post ${postId} not found`)
+        logger.error(`Post ${postId} not found`)
         throw new Error('Item not found')
     }
   

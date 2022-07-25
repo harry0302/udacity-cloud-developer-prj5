@@ -1,29 +1,23 @@
-import { CustomAuthorizerEvent, CustomAuthorizerResult } from 'aws-lambda'
 import 'source-map-support/register'
-
-import { decode, verify } from 'jsonwebtoken'
-import * as JwksRsa from 'jwks-rsa';
-import { CertSigningKey } from 'jwks-rsa';
-import { createLogger } from '../utils/logger'
-import { JwtPayload } from '../security/jwtPayload'
-import { Jwt } from '../security/jwt';
+import { CustomAuthorizerEvent, CustomAuthorizerResult } from 'aws-lambda'
+import { createLogger } from '../../utils/logger'
+import { getCurrentUser } from '../../security/utils'
 
 const logger = createLogger('auth')
-
-const jwksUrl = process.env.AUTH_0_JWKS_URL
-
-const jwksClient = JwksRsa({ jwksUri: jwksUrl })
 
 export const handler = async (
   event: CustomAuthorizerEvent
 ): Promise<CustomAuthorizerResult> => {
   logger.info('Authorizing a user', event.authorizationToken)
   try {
-    const jwtToken = await verifyToken(event.authorizationToken)
-    logger.info('User was authorized', jwtToken)
+    const jwtToken = getToken(event.authorizationToken)
+
+    const currentUser = getCurrentUser(jwtToken)
+
+    logger.info('User was authorized', currentUser)
 
     return {
-      principalId: jwtToken.sub,
+      principalId: currentUser,
       policyDocument: {
         Version: '2012-10-17',
         Statement: [
@@ -52,15 +46,6 @@ export const handler = async (
       }
     }
   }
-}
-
-async function verifyToken(authHeader: string): Promise<JwtPayload> {
-  const token = getToken(authHeader)
-  const jwt: Jwt = decode(token, { complete: true }) as Jwt
-
-  const certSigningKey = (await jwksClient.getSigningKey(jwt.header.kid)) as CertSigningKey;
-
-  return verify(token, certSigningKey.getPublicKey(), { algorithms: ['RS256'] }) as JwtPayload;
 }
 
 function getToken(authHeader: string): string {

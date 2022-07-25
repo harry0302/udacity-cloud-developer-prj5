@@ -1,46 +1,181 @@
 org: harry0302
 app: udacity-cloud-developer-prj5
 service: udacity-cloud-developer-prj5
-frameworkVersion: '3'
+frameworkVersion: '2'
 
-custom:
-  tableName: 'users-table-${sls:stage}'
+plugins:
+  - serverless-webpack
+  - serverless-iam-roles-per-function
+  - serverless-plugin-tracing
+  - serverless-reqvalidator-plugin
+  - serverless-aws-documentation
 
 provider:
   name: aws
-  runtime: nodejs14.x
-  iam:
-    role:
-      statements:
-        - Effect: Allow
-          Action:
-            - dynamodb:Query
-            - dynamodb:Scan
-            - dynamodb:GetItem
-            - dynamodb:PutItem
-            - dynamodb:UpdateItem
-            - dynamodb:DeleteItem
-          Resource:
-            - Fn::GetAtt: [ UsersTable, Arn ]
-  environment:
-    USERS_TABLE: ${self:custom.tableName}
+  runtime: nodejs12.x
 
+  stage: ${opt:stage, 'dev'}
+  region: ${opt:region, 'us-east-1'}
+
+  tracing:
+    lambda: true
+    apiGateway: true
+
+  environment:
+    JWT_SECRET: hell0W0rd#kkwiernc!
+    TOKEN_EXPIRATION: 2
+    USERS_TABLE: Users-${self:provider.stage}
+    USERS_BY_EMAIL_INDEX: UserEmailIndex
+  logs:
+    restApi: true
+
+custom:
+  documentation:
+    api:
+      info:
+        version: '1.0.0'
+        title: My Capstone Project
+        description: This is my Capstone Project API
+      tags:
+        - name: User
+          description: User Management
+    models:
+      - name: SignupRequest
+        contentType: "application/json"
+        schema:
+          required: 
+            - email
+            - username
+            - displayName
+            - password
+          properties:
+            email:
+              type: string
+            password:
+              type: string
+            username:
+              type: string
+            displayName:
+              type: string
+      - name: SigninRequest
+        contentType: "application/json"
+        schema:
+          required: 
+            - username
+            - password
+          properties:
+            password:
+              type: string
+            username:
+              type: string
 functions:
-  api:
-    handler: handler.handler
+
+  Auth:
+    handler: src/lambda/auth/authorizer.handler
+    iamRoleStatements:
+      - Effect: "Allow"
+        Action:
+          - "xray:PutTraceSegments"
+          - "xray:PutTelemetryRecords"
+        Resource:
+          - "*"
+
+  Signup:
+    handler: src/lambda/http/signup.handler
     events:
-      - httpApi: '*'
+      - http:
+          documentation:
+            summary: "Register user"
+            description: "Registers new user"
+            tags:
+              - User
+            requestModels:
+              "application/json": SignupRequest
+          method: POST
+          path: auth/signup
+          cors: true
+          reqValidatorName: 'xMyRequestValidator'
+
+    iamRoleStatements:
+      - Effect: Allow
+        Action:
+          - dynamodb:PutItem
+          - dynamodb:GetItem
+          - dynamodb:Query
+        Resource: arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.USERS_TABLE}
+      - Effect: "Allow"
+        Action:
+          - "xray:PutTraceSegments"
+          - "xray:PutTelemetryRecords"
+        Resource:
+          - "*"
+
+  Signin:
+    handler: src/lambda/http/signin.handler
+    events:
+      - http:
+          documentation:
+            summary: "Login user"
+            description: "Login user"
+            tags:
+              - User
+            requestModels:
+              "application/json": SigninRequest
+          method: POST
+          path: auth/signin
+          cors: true
+          reqValidatorName: 'xMyRequestValidator'
+    iamRoleStatements:
+      - Effect: Allow
+        Action:
+          - dynamodb:GetItem
+        Resource: arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.USERS_TABLE}
+      - Effect: "Allow"
+        Action:
+          - "xray:PutTraceSegments"
+          - "xray:PutTelemetryRecords"
+        Resource:
+          - "*"
 
 resources:
   Resources:
+    xMyRequestValidator:  
+      Type: "AWS::ApiGateway::RequestValidator"
+      Properties:
+        Name: 'my-req-validator'
+        RestApiId: 
+          Ref: ApiGatewayRestApi
+        ValidateRequestBody: true
+        ValidateRequestParameters: false  
+
+    GatewayResponseDefault4XX:
+      Type: AWS::ApiGateway::GatewayResponse
+      Properties:
+        ResponseParameters:
+          gatewayresponse.header.Access-Control-Allow-Origin: "'*'"
+          gatewayresponse.header.Access-Control-Allow-Headers: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
+          gatewayresponse.header.Access-Control-Allow-Methods: "'GET,OPTIONS,POST'"
+        ResponseType: DEFAULT_4XX
+        RestApiId:
+          Ref: ApiGatewayRestApi
+    
     UsersTable:
       Type: AWS::DynamoDB::Table
       Properties:
         AttributeDefinitions:
-          - AttributeName: userId
+          - AttributeName: username
+            AttributeType: S
+          - AttributeName: email
             AttributeType: S
         KeySchema:
-          - AttributeName: userId
+          - AttributeName: username
             KeyType: HASH
         BillingMode: PAY_PER_REQUEST
-        TableName: ${self:custom.tableName}
+        TableName: ${self:provider.environment.USERS_TABLE}
+        GlobalSecondaryIndexes:
+          - IndexName: ${self:provider.environment.USERS_BY_EMAIL_INDEX}
+            KeySchema:
+              - AttributeName: email
+                KeyType: HASH
+            Projection:
+              ProjectionType: ALL

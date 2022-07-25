@@ -9,8 +9,8 @@ export class UserRepository {
 
     constructor(
         private readonly docClient = client,
-        private readonly userTable = process.env.TODOS_TABLE,
-        private readonly userByEmailIndex = process.env.TODOS_BY_USER_INDEX
+        private readonly userTable = process.env.USERS_TABLE,
+        private readonly userByEmailIndex = process.env.USERS_BY_EMAIL_INDEX
     ) { }
 
     /**
@@ -29,26 +29,6 @@ export class UserRepository {
         const item = result.Item
 
         return item as User
-    }
-
-    /**
-    * Check user exists by email
-    * @param email string
-    * @returns boolean
-    */
-    async existsByEmail(email: string): Promise<boolean> {
-        logger.info(`Checking exists user by email ${email}`)
-
-        const result = await this.docClient.query({
-            TableName: this.userTable,
-            IndexName: this.userByEmailIndex,
-            KeyConditionExpression: 'email = :email',
-            ExpressionAttributeValues: {
-                ':email': email
-            }
-        }).promise()
-
-        return result.Count != 0
     }
 
     /**

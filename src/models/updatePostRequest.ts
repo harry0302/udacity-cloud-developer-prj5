@@ -1,7 +1,7 @@
 /**
- * Fields in a request to create a single Post item.
- */
- export interface UpdatePostRequest {
+* Fields in a request to update a existing Post item.
+*/
+export interface UpdatePostRequest {
     title: string
     description: string
     image: string

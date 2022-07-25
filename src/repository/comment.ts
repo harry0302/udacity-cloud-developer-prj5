@@ -14,16 +14,20 @@ export class CommentRepository {
     ) { }
 
     /**
-    * Find all comment sort by updatedAt
-    * @returns Article[]
+    * Find all comment sort by createdAt
+    * @returns Comment[]
     */
-    async findAll(): Promise<Comment[]> {
+    async findByPostId(postId: string): Promise<Comment[]> {
         logger.info(`Getting all comment`)
 
         const result = await this.docClient.query({
             TableName: this.commentTable,
             IndexName: this.commentByCreatedAtIndex,
-            ScanIndexForward: false
+            ScanIndexForward: false,
+            KeyConditionExpression: 'postId = :postId',
+            ExpressionAttributeValues: {
+                ':postId': postId
+            }
         }).promise()
 
         const items = result.Items
@@ -39,7 +43,7 @@ export class CommentRepository {
     * @returns void
     */
     async create(comment: Comment) {
-        logger.info(`Creating comment of ${comment.author} for article ${comment.article}`)
+        logger.info(`Creating comment of ${comment.author} for post ${comment.postId}`)
 
         await this.docClient.put({
             TableName: this.commentTable,

@@ -7,7 +7,7 @@ export interface User {
     updatedAt: string
 }
 
-export type UserSecured = Omit<User, "passwordHash"|"createdAt"|"updatedAt">
+export type UserSecured = Omit<User, "passwordHash"|"updatedAt">
 
 export function emptyUser(): User {
     return {
