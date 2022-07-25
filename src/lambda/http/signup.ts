@@ -3,7 +3,6 @@ import { APIGatewayProxyEvent, APIGatewayProxyResult } from "aws-lambda";
 import { SignupRequest } from "../../models/signupRequest";
 import { signup } from "../../service/auth";
 import { createLogger } from "../../utils/logger";
-import { envelop } from "../utils";
 
 const logger = createLogger('signup')
 
@@ -13,10 +12,15 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
         const signupRequest: SignupRequest = JSON.parse(event.body)
         const result = await signup(signupRequest)
 
-        return envelop(result)
+        return {
+            statusCode: 201,
+            headers: {
+                'Access-Control-Allow-Origin': '*',
+                'Access-Control-Allow-Credentials': true
+            },
+            body: JSON.stringify(result),
+        }
     } catch (error) {
-        const { message } = error as Error
-        
-        return envelop(message)
+        throw error
     }
 }

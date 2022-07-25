@@ -44,7 +44,9 @@ export async function signup(request: SignupRequest): Promise<SignupResponse> {
     return {
         user: {
             token: generateToken(userCreated.username),
-            ...userCreated
+            displayName: userCreated.displayName,
+            email: userCreated.email,
+            username: userCreated.username,
         }
     }
 }
@@ -66,7 +68,9 @@ export async function signin(request: SigninRequest): Promise<SigninResponse> {
     return {
         user: {
             token: generateToken(user.username),
-            ...user
+            displayName: user.displayName,
+            email: user.email,
+            username: user.username,
         }
     }
 }

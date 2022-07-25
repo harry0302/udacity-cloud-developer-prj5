@@ -1,14 +1,12 @@
 org: harry0302
 app: udacity-cloud-developer-prj5
 service: udacity-cloud-developer-prj5
-frameworkVersion: '2'
+frameworkVersion: "3"
 
 plugins:
   - serverless-webpack
   - serverless-iam-roles-per-function
   - serverless-plugin-tracing
-  - serverless-reqvalidator-plugin
-  - serverless-aws-documentation
 
 provider:
   name: aws
@@ -30,46 +28,10 @@ provider:
     restApi: true
 
 custom:
-  documentation:
-    api:
-      info:
-        version: '1.0.0'
-        title: My Capstone Project
-        description: This is my Capstone Project API
-      tags:
-        - name: User
-          description: User Management
-    models:
-      - name: SignupRequest
-        contentType: "application/json"
-        schema:
-          required: 
-            - email
-            - username
-            - displayName
-            - password
-          properties:
-            email:
-              type: string
-            password:
-              type: string
-            username:
-              type: string
-            displayName:
-              type: string
-      - name: SigninRequest
-        contentType: "application/json"
-        schema:
-          required: 
-            - username
-            - password
-          properties:
-            password:
-              type: string
-            username:
-              type: string
-functions:
+  serverless-iam-roles-per-function:
+    defaultInherit: true
 
+functions:
   Auth:
     handler: src/lambda/auth/authorizer.handler
     iamRoleStatements:
@@ -84,25 +46,21 @@ functions:
     handler: src/lambda/http/signup.handler
     events:
       - http:
-          documentation:
-            summary: "Register user"
-            description: "Registers new user"
-            tags:
-              - User
-            requestModels:
-              "application/json": SignupRequest
           method: POST
           path: auth/signup
           cors: true
-          reqValidatorName: 'xMyRequestValidator'
-
     iamRoleStatements:
+      - Effect: "Allow"
+        Action:
+          - "dynamodb:Query"
+          - "dynamodb:GetItem"
+          - "dynamodb:PutItem"
+        Resource: "arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.USERS_TABLE}"
       - Effect: Allow
         Action:
-          - dynamodb:PutItem
-          - dynamodb:GetItem
           - dynamodb:Query
-        Resource: arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.USERS_TABLE}
+          - dynamodb:Scan
+        Resource: "arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.USERS_TABLE}/index/*"
       - Effect: "Allow"
         Action:
           - "xray:PutTraceSegments"
@@ -114,22 +72,15 @@ functions:
     handler: src/lambda/http/signin.handler
     events:
       - http:
-          documentation:
-            summary: "Login user"
-            description: "Login user"
-            tags:
-              - User
-            requestModels:
-              "application/json": SigninRequest
           method: POST
           path: auth/signin
           cors: true
-          reqValidatorName: 'xMyRequestValidator'
+    iamRoleStatementsInherit: true
     iamRoleStatements:
-      - Effect: Allow
+      - Effect: "Allow"
         Action:
-          - dynamodb:GetItem
-        Resource: arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.USERS_TABLE}
+          - "dynamodb:GetItem"
+        Resource: "arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.USERS_TABLE}"
       - Effect: "Allow"
         Action:
           - "xray:PutTraceSegments"
@@ -139,15 +90,6 @@ functions:
 
 resources:
   Resources:
-    xMyRequestValidator:  
-      Type: "AWS::ApiGateway::RequestValidator"
-      Properties:
-        Name: 'my-req-validator'
-        RestApiId: 
-          Ref: ApiGatewayRestApi
-        ValidateRequestBody: true
-        ValidateRequestParameters: false  
-
     GatewayResponseDefault4XX:
       Type: AWS::ApiGateway::GatewayResponse
       Properties:
@@ -158,7 +100,7 @@ resources:
         ResponseType: DEFAULT_4XX
         RestApiId:
           Ref: ApiGatewayRestApi
-    
+
     UsersTable:
       Type: AWS::DynamoDB::Table
       Properties:
