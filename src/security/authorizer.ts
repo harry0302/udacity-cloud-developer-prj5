@@ -1,7 +1,7 @@
 import 'source-map-support/register'
 import { CustomAuthorizerEvent, CustomAuthorizerResult } from 'aws-lambda'
 import { createLogger } from '../utils/logger'
-import { getCurrentUser } from './utils'
+import { getJwtPayload, getToken } from './utils'
 
 const logger = createLogger('auth')
 
@@ -12,12 +12,12 @@ export const handler = async (
   try {
     const jwtToken = getToken(event.authorizationToken)
 
-    const currentUser = getCurrentUser(jwtToken)
+    const jwtPayload = getJwtPayload(jwtToken)
 
-    logger.info('User was authorized', currentUser)
+    logger.info('User was authorized', jwtPayload.sub)
 
     return {
-      principalId: currentUser,
+      principalId: jwtPayload.sub,
       policyDocument: {
         Version: '2012-10-17',
         Statement: [
@@ -46,16 +46,4 @@ export const handler = async (
       }
     }
   }
-}
-
-function getToken(authHeader: string): string {
-  if (!authHeader) throw new Error('No authentication header')
-
-  if (!authHeader.toLowerCase().startsWith('bearer '))
-    throw new Error('Invalid authentication header')
-
-  const split = authHeader.split(' ')
-  const token = split[1]
-
-  return token
 }

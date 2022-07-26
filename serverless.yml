@@ -22,6 +22,9 @@ provider:
     TOKEN_EXPIRATION: 2
     USERS_TABLE: Users-${self:provider.stage}
     USERS_BY_EMAIL_INDEX: UserEmailIndex
+    POSTS_TABLE: Posts-${self:provider.stage}
+    POSTS_BY_UPDATED_AT_INDEX: PostUpdatedAtIndex
+    POSTS_BY_AUTHOR_INDEX: PostAuthorIndex
   logs:
     restApi: true
 
@@ -42,7 +45,7 @@ functions:
     handler: src/security/authorizer.handler
 
   Signup:
-    handler: src/controller/signup.handler
+    handler: src/controller/auth.signup
     events:
       - http:
           method: POST
@@ -62,7 +65,7 @@ functions:
         Resource: "arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.USERS_TABLE}/index/*"
 
   Signin:
-    handler: src/controller/signin.handler
+    handler: src/controller/auth.signin
     events:
       - http:
           method: POST
@@ -74,6 +77,20 @@ functions:
         Action:
           - "dynamodb:GetItem"
         Resource: "arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.USERS_TABLE}"
+
+  CreatePost:
+    handler: src/controller/post.createPost
+    events:
+      - http:
+          method: post
+          path: post
+          cors: true
+          authorizer: Auth
+    iamRoleStatements:
+      - Effect: "Allow"
+        Action:
+          - "dynamodb:PutItem"
+        Resource: "arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.POSTS_TABLE}"
 
 resources:
   Resources:
@@ -106,5 +123,36 @@ resources:
             KeySchema:
               - AttributeName: email
                 KeyType: HASH
+            Projection:
+              ProjectionType: ALL
+
+    PostsTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        AttributeDefinitions:
+          - AttributeName: postId
+            AttributeType: S
+          - AttributeName: author
+            AttributeType: S
+          - AttributeName: updatedAt
+            AttributeType: S  
+        KeySchema:
+          - AttributeName: postId
+            KeyType: HASH
+        BillingMode: PAY_PER_REQUEST
+        TableName: ${self:provider.environment.POSTS_TABLE}
+        GlobalSecondaryIndexes:
+          - IndexName: ${self:provider.environment.POSTS_BY_AUTHOR_INDEX}
+            KeySchema:
+              - AttributeName: author
+                KeyType: HASH
+            Projection:
+              ProjectionType: ALL
+          - IndexName: ${self:provider.environment.POSTS_BY_UPDATED_AT_INDEX}
+            KeySchema:
+              - AttributeName: postId
+                KeyType: HASH
+              - AttributeName: updatedAt
+                KeyType: RANGE
             Projection:
               ProjectionType: ALL

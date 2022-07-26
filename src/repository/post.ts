@@ -9,9 +9,9 @@ export class PostRepository {
 
     constructor(
         private readonly docClient = client,
-        private readonly postTable = process.env.TODOS_TABLE,
-        private readonly postByUpdatedAtIndex = process.env.TODOS_BY_USER_INDEX,
-        private readonly postByUserIndex = process.env.TODOS_BY_USER_INDEX
+        private readonly postTable = process.env.POSTS_TABLE,
+        private readonly postByUpdatedAtIndex = process.env.POSTS_BY_UPDATED_AT_INDEX,
+        private readonly postByAuthorIndex = process.env.POSTS_BY_AUTHOR_INDEX
     ) { }
 
     /**
@@ -44,7 +44,7 @@ export class PostRepository {
 
         const result = await this.docClient.query({
             TableName: this.postTable,
-            IndexName: this.postByUserIndex,
+            IndexName: this.postByAuthorIndex,
             ScanIndexForward: false,
             KeyConditionExpression: 'author = :author',
             ExpressionAttributeValues: {
