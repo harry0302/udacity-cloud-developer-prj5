@@ -39,10 +39,10 @@ custom:
 
 functions:
   Auth:
-    handler: src/controller/auth/authorizer.handler
+    handler: src/security/authorizer.handler
 
   Signup:
-    handler: src/controller/http/signup.handler
+    handler: src/controller/signup.handler
     events:
       - http:
           method: POST
@@ -62,7 +62,7 @@ functions:
         Resource: "arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.USERS_TABLE}/index/*"
 
   Signin:
-    handler: src/controller/http/signin.handler
+    handler: src/controller/signin.handler
     events:
       - http:
           method: POST

@@ -1,9 +1,9 @@
 import 'source-map-support/register'
 import { APIGatewayProxyEvent, APIGatewayProxyResult } from "aws-lambda";
-import { SignupRequest } from "../../dto/signupRequest";
-import { signup } from "../../service/auth";
-import { createLogger } from "../../utils/logger";
-import { envelop, responseError } from '../utils';
+import { SignupRequest } from "../dto/signupRequest";
+import { signup } from "../service/auth";
+import { createLogger } from "../utils/logger";
+import { envelop, responseError } from './utils';
 
 const logger = createLogger('signup')
 
