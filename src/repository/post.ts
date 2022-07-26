@@ -1,5 +1,5 @@
 import 'source-map-support/register'
-import { Post } from '../entity/post'
+import { Post } from '../models/post'
 import { client } from '../utils/dynamoDBClient'
 import { createLogger } from '../utils/logger'
 

@@ -1,8 +1,9 @@
 import 'source-map-support/register'
 import { APIGatewayProxyEvent, APIGatewayProxyResult } from "aws-lambda";
-import { SignupRequest } from "../../models/signupRequest";
+import { SignupRequest } from "../../dto/signupRequest";
 import { signup } from "../../service/auth";
 import { createLogger } from "../../utils/logger";
+import { envelop, responseError } from '../utils';
 
 const logger = createLogger('signup')
 
@@ -12,15 +13,8 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
         const signupRequest: SignupRequest = JSON.parse(event.body)
         const result = await signup(signupRequest)
 
-        return {
-            statusCode: 201,
-            headers: {
-                'Access-Control-Allow-Origin': '*',
-                'Access-Control-Allow-Credentials': true
-            },
-            body: JSON.stringify(result),
-        }
+        return envelop(result, 201)
     } catch (error) {
-        throw error
+        return responseError(error)
     }
 }

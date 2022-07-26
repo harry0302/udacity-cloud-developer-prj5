@@ -1,5 +1,5 @@
 import 'source-map-support/register'
-import { Comment } from '../entity/comment'
+import { Comment } from '../models/comment'
 import { client } from '../utils/dynamoDBClient'
 import { createLogger } from '../utils/logger'
 

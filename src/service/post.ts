@@ -1,10 +1,11 @@
 import 'source-map-support/register'
-import { Post } from '../entity/post'
+import { Post } from '../models/post'
 import { PostRepository } from '../repository/post'
 import { createLogger } from '../utils/logger'
-import { CreatePostRequest } from '../models/createPostRequest'
+import { CreatePostRequest } from '../dto/createPostRequest'
 import { v4 as uuidv4 } from 'uuid';
-import { UpdatePostRequest } from '../models/updatePostRequest'
+import { UpdatePostRequest } from '../dto/updatePostRequest'
+import { ErrorREST, Errors } from '../utils/error'
 
 const logger = createLogger('postService')
 
@@ -57,12 +58,12 @@ export async function updatePost(username: string, postId: string, request: Upda
   
     if (!item) {
         logger.error(`Post ${postId} not found`)
-        throw new Error('Item not found')
+        throw new ErrorREST(Errors.BadRequest, 'Item not found')
     }
   
     if (item.author !== username) {
       logger.error(`User ${username} does not have permission to update post ${postId}`)
-      throw new Error('User is not authorized to update item')
+      throw new ErrorREST(Errors.Forbidden, 'User is not authorized to update item')
     }
   
     await postRepo.update({
@@ -78,12 +79,12 @@ export async function deletePost(username: string, postId: string) {
   
     if (!item) {
         logger.error(`Post ${postId} not found`)
-        throw new Error('Item not found')
+        throw new ErrorREST(Errors.BadRequest, 'Item not found')
     }
   
     if (item.author !== username) {
       logger.error(`User ${username} does not have permission to delete post ${postId}`)
-      throw new Error('User is not authorized to update item')
+      throw new ErrorREST(Errors.Forbidden, 'User is not authorized to update item')
     }
   
     await postRepo.delete(postId)

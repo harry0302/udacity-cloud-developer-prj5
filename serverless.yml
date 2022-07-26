@@ -15,9 +15,7 @@ provider:
   stage: ${opt:stage, 'dev'}
   region: ${opt:region, 'us-east-1'}
 
-  tracing:
-    lambda: true
-    apiGateway: true
+  tracing: true
 
   environment:
     JWT_SECRET: hell0W0rd#kkwiernc!
@@ -27,23 +25,24 @@ provider:
   logs:
     restApi: true
 
+  iamRoleStatements:
+    - Effect: "Allow"
+      Action:
+        - "xray:PutTraceSegments"
+        - "xray:PutTelemetryRecords"
+      Resource:
+        - "*"
+
 custom:
   serverless-iam-roles-per-function:
     defaultInherit: true
 
 functions:
   Auth:
-    handler: src/lambda/auth/authorizer.handler
-    iamRoleStatements:
-      - Effect: "Allow"
-        Action:
-          - "xray:PutTraceSegments"
-          - "xray:PutTelemetryRecords"
-        Resource:
-          - "*"
+    handler: src/controller/auth/authorizer.handler
 
   Signup:
-    handler: src/lambda/http/signup.handler
+    handler: src/controller/http/signup.handler
     events:
       - http:
           method: POST
@@ -61,15 +60,9 @@ functions:
           - dynamodb:Query
           - dynamodb:Scan
         Resource: "arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.USERS_TABLE}/index/*"
-      - Effect: "Allow"
-        Action:
-          - "xray:PutTraceSegments"
-          - "xray:PutTelemetryRecords"
-        Resource:
-          - "*"
 
   Signin:
-    handler: src/lambda/http/signin.handler
+    handler: src/controller/http/signin.handler
     events:
       - http:
           method: POST
@@ -81,12 +74,6 @@ functions:
         Action:
           - "dynamodb:GetItem"
         Resource: "arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.USERS_TABLE}"
-      - Effect: "Allow"
-        Action:
-          - "xray:PutTraceSegments"
-          - "xray:PutTelemetryRecords"
-        Resource:
-          - "*"
 
 resources:
   Resources:

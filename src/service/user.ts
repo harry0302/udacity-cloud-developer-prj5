@@ -1,5 +1,5 @@
 import 'source-map-support/register'
-import { UserSecured } from "../entity/user";
+import { UserSecured } from "../models/user";
 import { UserRepository } from "../repository/user";
 import { createLogger } from "../utils/logger";
 
