@@ -50,9 +50,9 @@ export function getToken(authHeader: string): string {
 }
 
 /**
-* Get a username from an API Gateway event
+* Get a userId from an API Gateway event
 * @param event an event from API Gateway
-* @returns a user name from a JWT token
+* @returns a user id from a JWT token
 */
 export function getCurrentUser(event: APIGatewayProxyEvent): string {
   const authorization = event.headers.Authorization

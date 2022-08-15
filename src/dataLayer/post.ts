@@ -35,26 +35,26 @@ export class PostRepository {
     }
 
     /**
-    * Find all post by author
-    * @param author will be find
+    * Find all post by UserId
+    * @param userId will be find
     * @returns post[]
     */
-     async findByAuthor(author: string): Promise<Post[]> {
-        logger.info(`Getting all post by author ${author}`)
+     async findByUserId(userId: string): Promise<Post[]> {
+        logger.info(`Getting all post by userId ${userId}`)
 
         const result = await this.docClient.query({
             TableName: this.postTable,
             IndexName: this.postByAuthorIndex,
             ScanIndexForward: false,
-            KeyConditionExpression: 'author = :author',
+            KeyConditionExpression: 'userId = :userId',
             ExpressionAttributeValues: {
-                ':author': author
+                ':userId': userId
             }
         }).promise()
 
         const items = result.Items
 
-        logger.info(`Found ${items.length} post by author ${author}`)
+        logger.info(`Found ${items.length} post by userId ${userId}`)
 
         return items as Post[]
     }
@@ -102,11 +102,10 @@ export class PostRepository {
         await this.docClient.update({
             TableName: this.postTable,
             Key: { postId: post.postId },
-            UpdateExpression: 'set title = :title, description = :description, image = :image, updatedAt = :updatedAt',
+            UpdateExpression: 'set caption = :caption, url = :url updatedAt = :updatedAt',
             ExpressionAttributeValues: {
-                ":title": post.title,
-                ":description": post.description,
-                ":image": post.image,
+                ":caption": post.caption,
+                ":url": post.url,
                 ":updatedAt": new Date().toISOString()
             }
         }).promise()

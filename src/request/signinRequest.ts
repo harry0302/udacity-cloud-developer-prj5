@@ -2,6 +2,6 @@
 * Fields in a request to signin user.
 */
 export interface SigninRequest {
-    username: string
+    email: string
     password: string
 }

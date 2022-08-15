@@ -2,10 +2,9 @@
 * Fields in a response signin user usecase.
 */
 export interface SigninResponse {
+    token: string
     user: {
-        username: string
+        userId: string
         email: string
-        token: string
-        displayName: string
     }
 }

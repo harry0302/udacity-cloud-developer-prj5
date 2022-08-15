@@ -19,12 +19,14 @@ provider:
 
   environment:
     JWT_SECRET: hell0W0rd#kkwiernc!
-    TOKEN_EXPIRATION: 2
+    TOKEN_EXPIRATION: 1h
     USERS_TABLE: Users-${self:provider.stage}
     USERS_BY_EMAIL_INDEX: UserEmailIndex
     POSTS_TABLE: Posts-${self:provider.stage}
     POSTS_BY_UPDATED_AT_INDEX: PostUpdatedAtIndex
     POSTS_BY_AUTHOR_INDEX: PostAuthorIndex
+    ATTACHMENT_S3_BUCKET: serverless-c5-harry0302-attachment-${self:provider.stage}
+    SIGNED_URL_EXPIRATION: 300
   logs:
     restApi: true
 
@@ -42,10 +44,10 @@ custom:
 
 functions:
   Auth:
-    handler: src/security/authorizer.handler
+    handler: src/lambda/auth/jwtAuthorizer.handler
 
   Signup:
-    handler: src/controller/auth.signup
+    handler: src/lambda/http/signup.handler
     events:
       - http:
           method: POST
@@ -65,25 +67,28 @@ functions:
         Resource: "arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.USERS_TABLE}/index/*"
 
   Signin:
-    handler: src/controller/auth.signin
+    handler: src/lambda/http/signin.handler
     events:
       - http:
           method: POST
-          path: auth/signin
+          path: auth/login
           cors: true
-    iamRoleStatementsInherit: true
     iamRoleStatements:
       - Effect: "Allow"
         Action:
-          - "dynamodb:GetItem"
+          - "dynamodb:Query"
         Resource: "arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.USERS_TABLE}"
+      - Effect: Allow
+        Action:
+          - dynamodb:Query
+        Resource: "arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.USERS_TABLE}/index/*"
 
   CreatePost:
-    handler: src/controller/post.createPost
+    handler: src/lambda/http/createPost.handler
     events:
       - http:
           method: post
-          path: post
+          path: posts
           cors: true
           authorizer: Auth
     iamRoleStatements:
@@ -91,6 +96,43 @@ functions:
         Action:
           - "dynamodb:PutItem"
         Resource: "arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.POSTS_TABLE}"
+      - Effect: Allow
+        Action:
+          - dynamodb:Query
+        Resource: "arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.POSTS_TABLE}/index/*"
+  
+  GenerateUploadUrl:
+    handler: src/lambda/http/generateUploadUrl.handler
+    events:
+      - http:
+          method: get
+          path: posts/signed-url
+          cors: true
+          authorizer: Auth
+    iamRoleStatements:
+      - Effect: Allow
+        Action:
+          - s3:PutObject
+          - s3:GetObject
+        Resource: arn:aws:s3:::${self:provider.environment.ATTACHMENT_S3_BUCKET}/*
+  
+  GetPosts:
+    handler: src/lambda/http/getPosts.handler
+    events:
+      - http:
+          method: get
+          path: posts
+          cors: true
+          authorizer: Auth
+    iamRoleStatements:
+      - Effect: Allow
+        Action:
+          - dynamodb:Query
+        Resource: arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.POSTS_TABLE}
+      - Effect: Allow
+        Action:
+          - dynamodb:Query
+        Resource: "arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.POSTS_TABLE}/index/*"
 
 resources:
   Resources:
@@ -109,12 +151,12 @@ resources:
       Type: AWS::DynamoDB::Table
       Properties:
         AttributeDefinitions:
-          - AttributeName: username
+          - AttributeName: userId
             AttributeType: S
           - AttributeName: email
             AttributeType: S
         KeySchema:
-          - AttributeName: username
+          - AttributeName: userId
             KeyType: HASH
         BillingMode: PAY_PER_REQUEST
         TableName: ${self:provider.environment.USERS_TABLE}
@@ -132,7 +174,7 @@ resources:
         AttributeDefinitions:
           - AttributeName: postId
             AttributeType: S
-          - AttributeName: author
+          - AttributeName: userId
             AttributeType: S
           - AttributeName: updatedAt
             AttributeType: S  
@@ -144,7 +186,7 @@ resources:
         GlobalSecondaryIndexes:
           - IndexName: ${self:provider.environment.POSTS_BY_AUTHOR_INDEX}
             KeySchema:
-              - AttributeName: author
+              - AttributeName: userId
                 KeyType: HASH
             Projection:
               ProjectionType: ALL
@@ -156,3 +198,35 @@ resources:
                 KeyType: RANGE
             Projection:
               ProjectionType: ALL
+
+    AttachmentsBucket:
+      Type: AWS::S3::Bucket
+      Properties:
+        BucketName: ${self:provider.environment.ATTACHMENT_S3_BUCKET}
+        CorsConfiguration:
+          CorsRules:
+            - AllowedOrigins:
+                - '*'
+              AllowedHeaders:
+                - '*'
+              AllowedMethods:
+                - GET
+                - PUT
+                - POST
+                - DELETE
+                - HEAD
+              MaxAge: 3000
+
+    AttachmentsBucketPolicy:
+      Type: AWS::S3::BucketPolicy
+      Properties:
+        PolicyDocument:
+          Id: MyPolicy
+          Version: "2012-10-17"
+          Statement:
+            - Sid: PublicReadForGetBucketObjects
+              Effect: Allow
+              Principal: '*'
+              Action: 's3:GetObject'
+              Resource: 'arn:aws:s3:::${self:provider.environment.ATTACHMENT_S3_BUCKET}/*'
+        Bucket: !Ref AttachmentsBucket

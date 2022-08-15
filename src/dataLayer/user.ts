@@ -14,16 +14,16 @@ export class UserRepository {
     ) { }
 
     /**
-    * Find a user by username
-    * @param username string
+    * Find a user by userId
+    * @param userId string
     * @returns a user
     */
-    async findByUsername(username: string): Promise<User> {
-        logger.info(`Getting user by username ${username}`)
+    async findByUserId(userId: string): Promise<User> {
+        logger.info(`Getting user by userId ${userId}`)
 
         const result = await this.docClient.get({
             TableName: this.userTable,
-            Key: { username: username }
+            Key: { userId: userId }
         }).promise()
 
         const item = result.Item
@@ -48,6 +48,7 @@ export class UserRepository {
             }
         }).promise()
 
+        logger.info(`Found user by email ${email}: ${result.Count}`)
         if (result.Count == 0) {
             return null
         }
@@ -63,7 +64,7 @@ export class UserRepository {
     * @returns void
     */
     async create(user: User) {
-        logger.info(`Creating user ${user.username}`)
+        logger.info(`Creating user ${user.email}`)
 
         await this.docClient.put({
             TableName: this.userTable,
@@ -77,14 +78,13 @@ export class UserRepository {
     * @returns void
     */
     async update(user: User) {
-        logger.info(`Updating user item ${user.username}`)
+        logger.info(`Updating user item ${user.userId}`)
 
         await this.docClient.update({
             TableName: this.userTable,
-            Key: { username: user.username },
-            UpdateExpression: 'set displayName = :displayName, passwordHash = :passwordHash, updatedAt = :updatedAt',
+            Key: { userId: user.userId },
+            UpdateExpression: 'set passwordHash = :passwordHash, updatedAt = :updatedAt',
             ExpressionAttributeValues: {
-                ":displayName": user.displayName,
                 ":passwordHash": user.passwordHash,
                 ":updatedAt": new Date().toISOString()
             }

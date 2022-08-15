@@ -1,10 +1,8 @@
 export interface Post {
   postId: string
-  title: string
-  description: string
-  image: string
+  userId: string
+  caption: string
+  url: string
   createdAt: string
   updatedAt: string
-  author: string
-  hearts?: string[]
 }

@@ -2,10 +2,9 @@
 * Fields in a response of signup user usecase.
 */
 export interface SignupResponse {
+    token: string
     user: {
-        username: string
+        userId: string
         email: string
-        token: string
-        displayName: string
     }
 }
