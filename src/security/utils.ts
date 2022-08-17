@@ -1,25 +1,41 @@
-import { APIGatewayProxyEvent } from "aws-lambda"
-import * as Jwt from "jsonwebtoken"
-import { ErrorREST, Errors } from "../utils/error"
-import { JwtPayload } from "./jwtPayload"
+import { APIGatewayProxyEvent } from "aws-lambda";
+import * as Jwt from "jsonwebtoken";
+import { HttpStatusCode } from "../constants/httpStatusCode";
+import { ErrorREST } from "../utils/error";
+import { JwtPayload } from "./jwtPayload";
+import * as bcrypt from "bcryptjs";
 
-const { JWT_SECRET, TOKEN_EXPIRATION } = process.env
+const { JWT_SECRET, TOKEN_EXPIRATION } = process.env;
+
+const saltRounds = 10;
+
+export async function generatePassword(plainTextPassword: string): Promise<string> {
+  const salt = await bcrypt.genSalt(saltRounds);
+
+  return await bcrypt.hash(plainTextPassword, salt);
+}
+
+export async function comparePassword(plainTextPassword: string, passwordHash: string): Promise<boolean> {
+  const match = await bcrypt.compare(plainTextPassword, passwordHash);
+
+  return match;
+}
 
 /**
-* Generate a JWT token from username
-* @param username parse to jwtpayload
+* Generate a JWT token from userId
+* @param userId parse to jwtpayload
 * @returns generated JWT token
 */
-export function generateToken(username: string): string {
-  const secret = JWT_SECRET as Jwt.Secret
+export function generateToken(userId: string): string {
+  const secret = JWT_SECRET as Jwt.Secret;
 
-  const payload : JwtPayload = {
-    sub: username
-  }
+  const payload: JwtPayload = {
+    sub: userId
+  };
 
   return Jwt.sign(payload, secret, {
     expiresIn: TOKEN_EXPIRATION,
-  })
+  });
 }
 
 /**
@@ -28,8 +44,8 @@ export function generateToken(username: string): string {
 * @returns a JwtPayload from the JWT token
 */
 export function getJwtPayload(jwtToken: string): JwtPayload {
-  const decodedJwt = Jwt.verify(jwtToken, JWT_SECRET) as JwtPayload
-  return decodedJwt
+  const decodedJwt = Jwt.verify(jwtToken, JWT_SECRET) as JwtPayload;
+  return decodedJwt;
 }
 
 /**
@@ -38,15 +54,15 @@ export function getJwtPayload(jwtToken: string): JwtPayload {
 * @returns a JWT token
 */
 export function getToken(authHeader: string): string {
-  if (!authHeader) throw new ErrorREST(Errors.Unauthorized, 'No authentication header')
+  if (!authHeader) throw new ErrorREST(HttpStatusCode.Unauthorized, 'No authentication header');
 
   if (!authHeader.toLowerCase().startsWith('bearer '))
-    throw new ErrorREST(Errors.Unauthorized, 'Invalid authentication header')
+    throw new ErrorREST(HttpStatusCode.Unauthorized, 'Invalid authentication header');
 
-  const split = authHeader.split(' ')
-  const token = split[1]
+  const split = authHeader.split(' ');
+  const token = split[1];
 
-  return token
+  return token;
 }
 
 /**
@@ -55,8 +71,12 @@ export function getToken(authHeader: string): string {
 * @returns a user id from a JWT token
 */
 export function getCurrentUser(event: APIGatewayProxyEvent): string {
-  const authorization = event.headers.Authorization
-  const jwtToken = getToken(authorization)
+  try {
+    const authorization = event.headers.Authorization;
+    const jwtToken = getToken(authorization);
 
-  return getJwtPayload(jwtToken).sub
+    return getJwtPayload(jwtToken).sub;
+  } catch (error) {
+    return '';
+  }
 }

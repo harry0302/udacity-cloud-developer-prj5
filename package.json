@@ -5,8 +5,10 @@
   "dependencies": {
     "aws-xray-sdk": "^2.5.0",
     "bcryptjs": "^2.4.3",
+    "email-validator": "^2.0.4",
     "jsonwebtoken": "^8.5.1",
     "jwks-rsa": "^2.1.4",
+    "slugify": "^1.6.5",
     "source-map-support": "^0.5.21",
     "uuid": "^8.3.2",
     "winston": "^3.8.1"

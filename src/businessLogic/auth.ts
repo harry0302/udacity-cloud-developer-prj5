@@ -2,32 +2,31 @@ import 'source-map-support/register'
 import { SignupRequest } from "../request/signupRequest";
 import { UserRepository } from "../dataLayer/user";
 import { createLogger } from "../utils/logger";
-import * as bcrypt from "bcryptjs";
 import { SignupResponse } from "../response/signupResponse";
-import { generateToken } from "../security/utils";
+import { comparePassword, generatePassword, generateToken } from "../security/utils";
 import { User } from "../models/user";
 import { SigninRequest } from "../request/signinRequest";
 import { SigninResponse } from "../response/signinResponse";
-import { ErrorREST, Errors } from '../utils/error';
+import { ErrorREST } from '../utils/error';
 import { v4 as uuidv4 } from 'uuid';
-
-const saltRounds = 10
+import { HttpStatusCode } from '../constants/httpStatusCode';
 
 const logger = createLogger('AuthService')
 
 const userRepo = new UserRepository()
-
-async function generatePassword(plainTextPassword: string): Promise<string> {
-    const salt = await bcrypt.genSalt(saltRounds);
-    return await bcrypt.hash(plainTextPassword, salt);
-}
 
 export async function signup(request: SignupRequest): Promise<SignupResponse> {
 
     const userWithThisEmail = await userRepo.findByEmail(request.email);
     if (userWithThisEmail) {
         logger.error(`Email already taken: [${request.email}]`);
-        throw new ErrorREST(Errors.BadRequest, `Email already taken: [${request.email}]`);
+        throw new ErrorREST(HttpStatusCode.BadRequest, `Email already taken: [${request.email}]`);
+    }
+
+    const userWithThisUsername = await userRepo.findByUsername(request.username);
+    if (userWithThisUsername) {
+        logger.error(`Username already taken: [${request.username}]`);
+        throw new ErrorREST(HttpStatusCode.BadRequest, `Username already taken: [${request.username}]`);
     }
 
     const hashedPassword = await generatePassword(request.password);
@@ -40,15 +39,22 @@ export async function signup(request: SignupRequest): Promise<SignupResponse> {
         createdAt: now,
         updatedAt: now,
         email: request.email,
+        username: request.username,
+        bio: '',
+        image: '',
+        followers: []
     };
 
-    await userRepo.create(newUser);
+    await userRepo.save(newUser);
 
     return {
-        token: generateToken(newUser.userId),
         user: {
+            token: generateToken(newUser.userId),
             email: newUser.email,
-            userId: newUser.userId
+            userId: newUser.userId,
+            bio: newUser.bio,
+            image: newUser.image,
+            username: newUser.username
         },
     };
 }
@@ -57,21 +63,24 @@ export async function signin(request: SigninRequest): Promise<SigninResponse> {
 
     const user = await userRepo.findByEmail(request.email);
     if (!user) {
-        logger.error(`Username not found: [${request.email}]`);
-        throw new ErrorREST(Errors.BadRequest, `Username not found: [${request.email}]`);
+        logger.error(`Email not found: [${request.email}]`);
+        throw new ErrorREST(HttpStatusCode.BadRequest, `Email not found: [${request.email}]`);
     }
     logger.info("Checking password")
-    const match = await bcrypt.compare(request.password, user.passwordHash)
+    const match = await comparePassword(request.password, user.passwordHash)
     if (!match) {
-        logger.error(`Password not match`)
-        throw new ErrorREST(Errors.BadRequest, `Password not match`)
+        logger.error(`Wrong password`)
+        throw new ErrorREST(HttpStatusCode.BadRequest, `Wrong password`)
     }
 
     return {
-        token: generateToken(user.userId),
         user: {
+            token: generateToken(user.userId),
             email: user.email,
-            userId: user.userId
+            userId: user.userId,
+            bio: user.bio,
+            image: user.image,
+            username: user.username,
         },
     };
 }

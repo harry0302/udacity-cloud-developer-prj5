@@ -10,7 +10,8 @@ export class UserRepository {
     constructor(
         private readonly docClient = client,
         private readonly userTable = process.env.USERS_TABLE,
-        private readonly userByEmailIndex = process.env.USERS_BY_EMAIL_INDEX
+        private readonly userByEmailIndex = process.env.USERS_BY_EMAIL_INDEX,
+        private readonly userUsernameIndex = process.env.USERS_BY_USERNAME_INDEX
     ) { }
 
     /**
@@ -59,11 +60,38 @@ export class UserRepository {
     }
 
     /**
-    * Create a new user
+    * Find a user by username
+    * @param username string
+    * @returns a user
+    */
+     async findByUsername(username: string): Promise<User> {
+        logger.info(`Getting user by username ${username}`)
+
+        const result = await this.docClient.query({
+            TableName: this.userTable,
+            IndexName: this.userUsernameIndex,
+            KeyConditionExpression: 'username = :username',
+            ExpressionAttributeValues: {
+                ':username': username
+            }
+        }).promise()
+
+        logger.info(`Found user by username ${username}: ${result.Count}`)
+        if (result.Count == 0) {
+            return null
+        }
+
+        const item = result.Items[0]
+
+        return item as User
+    }
+
+    /**
+    * Create a new user or replace a exist user
     * @param user data will store to db
     * @returns void
     */
-    async create(user: User) {
+    async save(user: User) {
         logger.info(`Creating user ${user.email}`)
 
         await this.docClient.put({
@@ -72,20 +100,15 @@ export class UserRepository {
         }).promise()
     }
 
-    /**
-    * Update a exist user
-    * @param user new data will be replace with exists at db
-    * @returns void
-    */
-    async update(user: User) {
-        logger.info(`Updating user item ${user.userId}`)
+    async updateFollowers(userId: string, followers: string[]) {
+        logger.info(`Updating user item ${userId}`)
 
         await this.docClient.update({
             TableName: this.userTable,
-            Key: { userId: user.userId },
-            UpdateExpression: 'set passwordHash = :passwordHash, updatedAt = :updatedAt',
+            Key: { userId: userId },
+            UpdateExpression: 'set followers = :followers, updatedAt = :updatedAt',
             ExpressionAttributeValues: {
-                ":passwordHash": user.passwordHash,
+                ":followers": followers,
                 ":updatedAt": new Date().toISOString()
             }
         }).promise()
