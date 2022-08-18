@@ -1,139 +1,128 @@
-<!--
-title: 'Serverless Framework Node Express API service backed by DynamoDB on AWS'
-description: 'This template demonstrates how to develop and deploy a simple Node Express API service backed by DynamoDB running on AWS Lambda using the traditional Serverless Framework.'
-layout: Doc
-framework: v3
-platform: AWS
-language: nodeJS
-priority: 1
-authorLink: 'https://github.com/serverless'
-authorName: 'Serverless, inc.'
-authorAvatar: 'https://avatars1.githubusercontent.com/u/13742415?s=200&v=4'
--->
+# Udacity - Cloud Developer Nanodegree Project 4
 
-# Serverless Framework Node Express API on AWS
+## Functionality of the application
 
-This template demonstrates how to develop and deploy a simple Node Express API service, backed by DynamoDB database, running on AWS Lambda using the traditional Serverless Framework.
+The application allows creating/removing/updating/fetching TODO items. Each TODO item can optionally have an attachment image. Each user only has access to TODO items that he/she has created.
 
+<div align="center">
+  <img src="./screenshots/todo_app.jpg" alt="Todo App" style="zoom:40%;" />
+</div>
 
-## Anatomy of the template
+***
 
-This template configures a single function, `api`, which is responsible for handling all incoming requests thanks to the `httpApi` event. To learn more about `httpApi` event configuration options, please refer to [httpApi event docs](https://www.serverless.com/framework/docs/providers/aws/events/http-api/). As the event is configured in a way to accept all incoming requests, `express` framework is responsible for routing and handling requests internally. Implementation takes advantage of `serverless-http` package, which allows you to wrap existing `express` applications. To learn more about `serverless-http`, please refer to corresponding [GitHub repository](https://github.com/dougmoscrop/serverless-http). Additionally, it also handles provisioning of a DynamoDB database that is used for storing data about users. The `express` application exposes two endpoints, `POST /users` and `GET /user/{userId}`, which allow to create and retrieve users.
+## Implemented functions
 
-## Usage
+The following lambda functions have been implemented (and set up in serverless.yml):
+- Auth: Lambda authorizer (formerly custom authorizer)
+- GetTodos: retrieves all or filter by name todos for
+- GetTodo: retrieves one todo (by id)
+- CreateTodo: creates a new todo item
+- UpdateTodo: updates a todo item
+- DeleteTodo: removes a todo item
+- GenerateUploadUrl: returns a signed url for uploading an image file to AWS S3
 
-### Deployment
-
-Install dependencies with:
-
+The JSON shape of a todo item
 ```
-npm install
+  {
+    "todoId": "123",
+    "createdAt": "2019-07-27T20:01:45.424Z",
+    "name": "Buy milk",
+    "dueDate": "2019-07-29T20:01:45.424Z",
+    "done": false,
+    "attachmentUrl": "http://example.com/image.png"
+  }
 ```
+All functions are already connected to appropriate events from API Gateway.
+An id of a user can be extracted from a JWT token passed by a client.
 
-and then deploy with:
+Authentication is implemented with Auth0 (using asymmetrically encrypted JWT tokens).
 
-```
-serverless deploy
-```
+***
+## Frontend
 
-After running deploy, you should see output similar to:
+The `client` folder contains a web application that can use the API that should be developed in the project. The apiId binding in `config.ts` should be set to the correct value.
 
-```bash
-Deploying aws-node-express-dynamodb-api-project to stage dev (us-east-1)
+This file configures your client application just as it was done in the course and contains an API endpoint and Auth0 configuration:
 
-✔ Service deployed to stack aws-node-express-dynamodb-api-project-dev (196s)
+```ts
+const apiId = '...' API Gateway id
+export const apiEndpoint = `https://${apiId}.execute-api.us-east-1.amazonaws.com/dev`
 
-endpoint: ANY - https://xxxxxxxxxx.execute-api.us-east-1.amazonaws.com
-functions:
-  api: aws-node-express-dynamodb-api-project-dev-api (766 kB)
-```
-
-_Note_: In current form, after deployment, your API is public and can be invoked by anyone. For production deployments, you might want to configure an authorizer. For details on how to do that, refer to [`httpApi` event docs](https://www.serverless.com/framework/docs/providers/aws/events/http-api/). Additionally, in current configuration, the DynamoDB table will be removed when running `serverless remove`. To retain the DynamoDB table even after removal of the stack, add `DeletionPolicy: Retain` to its resource definition.
-
-### Invocation
-
-After successful deployment, you can create a new user by calling the corresponding endpoint:
-
-```bash
-curl --request POST 'https://xxxxxx.execute-api.us-east-1.amazonaws.com/users' --header 'Content-Type: application/json' --data-raw '{"name": "John", "userId": "someUserId"}'
-```
-
-Which should result in the following response:
-
-```bash
-{"userId":"someUserId","name":"John"}
-```
-
-You can later retrieve the user by `userId` by calling the following endpoint:
-
-```bash
-curl https://xxxxxxx.execute-api.us-east-1.amazonaws.com/users/someUserId
-```
-
-Which should result in the following response:
-
-```bash
-{"userId":"someUserId","name":"John"}
-```
-
-If you try to retrieve user that does not exist, you should receive the following response:
-
-```bash
-{"error":"Could not find user with provided \"userId\""}
-```
-
-### Local development
-
-It is also possible to emulate DynamoDB, API Gateway and Lambda locally using the `serverless-dynamodb-local` and `serverless-offline` plugins. In order to do that, run:
-
-```bash
-serverless plugin install -n serverless-dynamodb-local
-serverless plugin install -n serverless-offline
-```
-
-It will add both plugins to `devDependencies` in `package.json` file as well as will add it to `plugins` in `serverless.yml`. Make sure that `serverless-offline` is listed as last plugin in `plugins` section:
-
-```
-plugins:
-  - serverless-dynamodb-local
-  - serverless-offline
-```
-
-You should also add the following config to `custom` section in `serverless.yml`:
-
-```
-custom:
-  (...)
-  dynamodb:
-    start:
-      migrate: true
-    stages:
-      - dev
-```
-
-Additionally, we need to reconfigure `AWS.DynamoDB.DocumentClient` to connect to our local instance of DynamoDB. We can take advantage of `IS_OFFLINE` environment variable set by `serverless-offline` plugin and replace:
-
-```javascript
-const dynamoDbClient = new AWS.DynamoDB.DocumentClient();
-```
-
-with the following:
-
-```javascript
-const dynamoDbClientParams = {};
-if (process.env.IS_OFFLINE) {
-  dynamoDbClientParams.region = 'localhost'
-  dynamoDbClientParams.endpoint = 'http://localhost:8000'
+export const authConfig = {
+  domain: '...',    // Domain from Auth0
+  clientId: '...',  // Client id from an Auth0 application
+  callbackUrl: 'http://localhost:3000/callback'
 }
-const dynamoDbClient = new AWS.DynamoDB.DocumentClient(dynamoDbClientParams);
 ```
 
-After that, running the following command with start both local API Gateway emulator as well as local instance of emulated DynamoDB:
+***
 
-```bash
-serverless offline start
+# How to run the application
+
+## Backend
+
+To deploy an application run the following commands:
+export NODE_OPTIONS=--max_old_space_size=8192
+
+```
+cd backend
+npm install
+sls deploy -v
 ```
 
-To learn more about the capabilities of `serverless-offline` and `serverless-dynamodb-local`, please refer to their corresponding GitHub repositories:
-- https://github.com/dherault/serverless-offline
-- https://github.com/99x/serverless-dynamodb-local
+## Frontend
+
+To run a client application first edit the `client/src/config.ts` file to set correct parameters. And then run the following commands:
+
+```
+cd client
+npm install
+npm run start
+```
+
+This should start a development server with the React application that will interact with the serverless TODO application.
+
+***
+
+# Monitoring
+## Distributed tracing
+
+X-Ray tracing has been set up
+
+<div align="center">
+  <img src="./screenshots/X-RAY.jpg" alt="1. X-Ray of the app" style="zoom:40%;" />
+</div>
+
+## Logging
+
+The starter code came with a configured [Winston](https://github.com/winstonjs/winston) logger that creates [JSON formatted](https://stackify.com/what-is-structured-logging-and-why-developers-need-it/) log statements. It is used to write log messages like this:
+
+<div align="center">
+  <img src="./screenshots/CloudWatch.jpg" alt="CloudWatch logs" style="zoom:40%;" />
+</div>
+
+```ts
+import { createLogger } from '../../utils/logger'
+const logger = createLogger('auth')
+
+// You can provide additional information with every log statement
+// This information can then be used to search for log statements in a log storage system
+logger.info('User was authorized', {
+  // Additional information stored with a log statement
+  key: 'value'
+})
+```
+
+<div align="center">
+  <img src="./screenshots/log_example(DeleteTodo).jpg" alt="DeleteTodo log" style="zoom:40%;" />
+</div>
+
+***
+
+## Postman collection
+
+An alternative way to test your API, you can use the Postman collection that contains sample requests. You can find a Postman collection in this project.
+
+<div align="center">
+  <img src="./screenshots/Postman.jpg" alt="Postman" style="zoom:40%;" />
+</div>
