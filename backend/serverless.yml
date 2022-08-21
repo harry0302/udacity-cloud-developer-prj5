@@ -134,7 +134,7 @@ functions:
           - "*"
 
   UpdateUser:
-    handler: src/handler/auth.updateUser
+    handler: src/handler/auth.updateCurrentUser
     events:
       - http:
           method: PUT

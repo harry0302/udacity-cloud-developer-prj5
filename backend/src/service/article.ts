@@ -36,6 +36,7 @@ export interface ArticleWithAuthorInfo {
     createdAt?: number
     updatedAt?: number
     favorited: boolean
+    favoritesCount: number
 }
 
 export async function getArticles(input: getArticlesInput): Promise<ArticleWithAuthorInfo[]> {
@@ -55,7 +56,7 @@ export async function getArticlesFeed(currentUser: string): Promise<ArticleWithA
     logger.info(`Retrieving all articles feed by user ${currentUser}`);
     const user = await UserService.getUserByUsername(currentUser);
 
-    if (!user.following) {
+    if (!user.following || user.following.length == 0) {
         return [];
     }
 
@@ -234,6 +235,7 @@ async function mapArticleWithAuthorInfo(article: Article, currentUser?: string):
         title: article.title,
         tagList: article.tagList,
         favorited: false,
+        favoritesCount: article.favoritesCount,
     };
 
     if (article.favoritedBy && currentUser) {
