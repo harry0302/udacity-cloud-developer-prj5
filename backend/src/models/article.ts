@@ -5,6 +5,9 @@ export interface Article {
   body: string
   author: string
   tagList?: string[]
+  favoritedBy: string[]
+  favoritesCount: number
   createdAt?: number
   updatedAt?: number
+  dummy: string
 }

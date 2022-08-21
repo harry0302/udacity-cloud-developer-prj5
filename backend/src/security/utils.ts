@@ -22,15 +22,15 @@ export async function comparePassword(plainTextPassword: string, passwordHash: s
 }
 
 /**
-* Generate a JWT token from userId
-* @param userId parse to jwtpayload
+* Generate a JWT token from username
+* @param username parse to jwtpayload
 * @returns generated JWT token
 */
-export function generateToken(userId: string): string {
+export function generateToken(username: string): string {
   const secret = JWT_SECRET as Jwt.Secret;
 
   const payload: JwtPayload = {
-    sub: userId
+    sub: username
   };
 
   return Jwt.sign(payload, secret, {

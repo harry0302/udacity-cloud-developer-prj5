@@ -1,20 +1,20 @@
 import { APIGatewayProxyEvent, APIGatewayProxyResult } from "aws-lambda";
 import { createLogger } from "../utils/logger";
-import { generateUploadUrl } from "../service/article"
+import * as FileService from "../service/file"
 import { envelop, responseError } from "./utils";
 import { v4 as uuidv4 } from 'uuid';
 
-const logger = createLogger('generateUploadUrlHandler')
+const logger = createLogger('FileHandler')
 
-export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> => {
+export const generateUploadUrl = async (event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> => {
     logger.info('Processing generateUploadUrl event', { event })
     try {
         const attachmentId = uuidv4();
-        const url = generateUploadUrl(attachmentId);
+        const url = FileService.getGetSignedUrl(attachmentId);
 
         return envelop({
             url: url,
-            id: attachmentId,
+            key: attachmentId,
         });
     } catch (error) {
         logger.error(error)

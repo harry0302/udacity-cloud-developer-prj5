@@ -9,37 +9,33 @@ const logger = createLogger('UsersService');
 
 const userRepo = new UserRepository();
 
-export async function getUserByUsername(username: string): Promise<User> {
+interface UserWithFollowInfo extends User {
+    isFollowing: boolean
+}
+
+export async function getUserByUsername(username: string, currentUser?: string): Promise<UserWithFollowInfo> {
     logger.info(`Retrieving user by username ${username}`);
-    const item = await userRepo.findByUsername(username);
+    const user = await userRepo.findByUsername(username);
 
-    if (!item) {
-        logger.info(`Not found user with username ${username}`)
-        throw new ErrorREST(404, `Not found user with username ${username}`)
+    if (!user) {
+        return null;
     }
 
-    delete item.passwordHash;
+    let isFollowing = false;
 
-    return item
-}
-
-export async function getUserById(id: string): Promise<User> {
-    logger.info(`Retrieving user by id ${id}`);
-    const item = await userRepo.findByUserId(id);
-
-    if (!item) {
-        logger.info(`Not found user with id ${id}`)
-        throw new ErrorREST(404, `Not found user with id ${id}`)
+    if (user.followers && currentUser) {
+        isFollowing = user.followers.includes(currentUser);
     }
 
-    delete item.passwordHash;
-
-    return item
+    return {
+        isFollowing: isFollowing,
+        ...user,
+    };
 }
 
 
-export async function followUser(userId: string, followingUsername: string): Promise<User> {
-    logger.info(`${userId} start following user ${followingUsername}`);
+export async function followUser(currentUsername: string, followingUsername: string): Promise<User> {
+    logger.info(`${currentUsername} start following user ${followingUsername}`);
     const user = await userRepo.findByUsername(followingUsername);
 
     if (!user) {
@@ -48,22 +44,36 @@ export async function followUser(userId: string, followingUsername: string): Pro
     }
 
     if (user.followers) {
-        if (!user.followers.includes(userId)) {
-            user.followers.push(userId);
+        if (!user.followers.includes(currentUsername)) {
+            user.followers.push(currentUsername);
         }
     } else {
-        user.followers = []
+        user.followers = [currentUsername]
     }
 
-    await userRepo.updateFollowers(user.userId, user.followers)
+    user.updatedAt = new Date().toISOString();
 
-    delete user.passwordHash;
+    await userRepo.save(user);
 
-    return user
+    const currentUser = await userRepo.findByUsername(currentUsername);
+
+    if (currentUser.following) {
+        if (!currentUser.following.includes(followingUsername)) {
+            currentUser.following.push(followingUsername);
+        }
+    } else {
+        currentUser.following = [followingUsername];
+    }
+
+    currentUser.updatedAt = new Date().toISOString();
+
+    await userRepo.save(currentUser);
+
+    return user;
 }
 
-export async function unfollowUser(userId: string, unfollowUsername: string): Promise<User> {
-    logger.info(`${userId} start following user ${userId}`);
+export async function unfollowUser(currentUsername: string, unfollowUsername: string): Promise<User> {
+    logger.info(`${currentUsername} start following user ${unfollowUsername}`);
     const user = await userRepo.findByUsername(unfollowUsername);
 
     if (!user) {
@@ -72,37 +82,52 @@ export async function unfollowUser(userId: string, unfollowUsername: string): Pr
     }
 
     if (user.followers) {
-        if (user.followers.includes(userId)) {
+        if (user.followers.includes(currentUsername)) {
             user.followers = user.followers.filter(
-                e => e != userId
+                e => e != currentUsername
             );
         }
     } else {
         user.followers = []
     }
 
-    await userRepo.updateFollowers(user.userId, user.followers)
+    user.updatedAt = new Date().toISOString();
 
-    delete user.passwordHash;
+    await userRepo.save(user);
 
-    return user
+    const currentUser = await userRepo.findByUsername(currentUsername);
+
+    if (currentUser.following) {
+        if (currentUser.following.includes(unfollowUsername)) {
+            currentUser.following = currentUser.following.filter(
+                e => e != unfollowUsername
+            );
+        }
+    } else {
+        currentUser.following = []
+    }
+
+    currentUser.updatedAt = new Date().toISOString();
+
+    await userRepo.save(currentUser);
+
+    return user;
 }
 
 interface updateUserInput {
     email: string
-    username: string
     bio: string
     image: string
     newPassword: string
 }
 
-export async function updateUser(userId: string, input: updateUserInput): Promise<User> {
-    logger.info(`Updating user ${userId}`);
-    const user = await userRepo.findByUserId(userId);
+export async function updateUser(currentUser: string, input: updateUserInput): Promise<User> {
+    logger.info(`Updating user ${currentUser}`);
+    const user = await userRepo.findByUsername(currentUser);
 
     if (!user) {
-        logger.info(`Not found user with id ${userId}`)
-        throw new ErrorREST(404, `Not found user with id ${userId}`)
+        logger.info(`Not found user with username ${currentUser}`)
+        throw new ErrorREST(404, `Not found user with username ${currentUser}`)
     }
 
     if (user.email != input.email) {
@@ -112,15 +137,6 @@ export async function updateUser(userId: string, input: updateUserInput): Promis
             throw new ErrorREST(HttpStatusCode.BadRequest, `Email already taken: [${input.email}]`);
         }
         user.email = input.email
-    }
-
-    if (user.username != input.username) {
-        const userWithThisUsername = await userRepo.findByUsername(input.username);
-        if (userWithThisUsername) {
-            logger.error(`Username already taken: [${input.username}]`);
-            throw new ErrorREST(HttpStatusCode.BadRequest, `Username already taken: [${input.username}]`);
-        }
-        user.username = input.username
     }
 
     if (input.newPassword) {
@@ -135,11 +151,9 @@ export async function updateUser(userId: string, input: updateUserInput): Promis
         user.bio = input.bio;
     }
 
-    user.updatedAt = new Date().toISOString()
+    user.updatedAt = new Date().toISOString();
 
-    await userRepo.save(user)
+    await userRepo.save(user);
 
-    delete user.passwordHash;
-
-    return user
+    return user;
 }

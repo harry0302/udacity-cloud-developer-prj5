@@ -19,7 +19,7 @@ export class ArticleRepository {
         private readonly docClient = client,
         private readonly articleTable = process.env.ARTICLES_TABLE,
         private readonly articleByUpdatedAtIndex = process.env.ARTICLES_BY_UPDATED_AT_INDEX,
-        private readonly articleByAuthorIndex = process.env.ARTILCES_BY_AUTHOR_INDEX
+        private readonly articleByAuthorIndex = process.env.ARTICLES_BY_AUTHOR_INDEX
     ) { }
 
     /**
@@ -27,7 +27,11 @@ export class ArticleRepository {
     * @returns article[]
     */
     async findAll(params: findAllParam): Promise<Article[]> {
-        logger.info(`Getting all article`);
+        logger.info(`Getting all article`, { params });
+
+        if (params.author) {
+            return await this.findByAuthor(params.author);
+        }
 
         const queryParams: DocumentClient.QueryInput = {
             TableName: this.articleTable,
@@ -42,19 +46,60 @@ export class ArticleRepository {
         if (params.tag) {
             queryParams.FilterExpression = 'contains(tagList, :tag)';
             queryParams.ExpressionAttributeValues[':tag'] = params.tag;
-        } else if (params.author) {
-            queryParams.FilterExpression = 'author = :author';
-            queryParams.ExpressionAttributeValues[':author'] = params.author;
         } else if (params.favorited) {
             queryParams.FilterExpression = 'contains(favoritedBy, :favorited)';
             queryParams.ExpressionAttributeValues[':favorited'] = params.favorited;
         }
 
-        const result = await queryAll(this.docClient, queryParams);
+        const result = await queryAll<Article>(this.docClient, queryParams);
 
         logger.info(`Found ${result.length} article`);
 
-        return result as Article[];
+        return result;
+    }
+
+    async findByAuthor(author: string): Promise<Article[]> {
+        const result = await queryAll<Article>(this.docClient, {
+            TableName: this.articleTable,
+            IndexName: this.articleByAuthorIndex,
+            ScanIndexForward: false,
+            KeyConditionExpression: 'author = :author',
+            ExpressionAttributeValues: {
+                ':author': author,
+            }
+        });
+
+        logger.info(`Found ${result.length} article`);
+
+        return result;
+    }
+
+    async findByAuthorIn(authorList: string[]): Promise<Article[]> {
+        const queryParams: DocumentClient.QueryInput = {
+            TableName: this.articleTable,
+            IndexName: this.articleByUpdatedAtIndex,
+            KeyConditionExpression: 'dummy = :dummy',
+            FilterExpression: 'author IN ',
+            ExpressionAttributeValues: {
+                ':dummy': 'OK',
+            },
+            ScanIndexForward: false,
+        }
+
+        for (let i = 0; i < authorList.length; ++i) {
+            queryParams.ExpressionAttributeValues[`:author${i}`] = authorList[i];
+        }
+
+        queryParams.FilterExpression += '(' +
+            Object.keys(queryParams.ExpressionAttributeValues)
+                .filter(e => e !== ':dummy').join(",") +
+            ')';
+
+        const result = await queryAll<Article>(this.docClient, queryParams);
+
+        logger.info(`Found ${result.length} article`);
+
+        return result;
     }
 
     /**
@@ -65,21 +110,14 @@ export class ArticleRepository {
     async findBySlug(slug: string): Promise<Article> {
         logger.info(`Getting article by slug ${slug}`);
 
-        const result = await this.docClient.query({
+        const result = await this.docClient.get({
             TableName: this.articleTable,
-            IndexName: this.articleByAuthorIndex,
-            ScanIndexForward: false,
-            KeyConditionExpression: 'slug = :slug',
-            ExpressionAttributeValues: {
-                ':slug': slug
+            Key: {
+                slug: slug,
             }
         }).promise();
 
-        if (result.Count == 0) {
-            return null;
-        }
-
-        const item = result.Items[0];
+        const item = result.Item;
 
         return item as Article;
     }
@@ -124,36 +162,5 @@ export class ArticleRepository {
             TableName: this.articleTable,
             Key: { slug: slug }
         }).promise()
-    }
-
-    async findTags(): Promise<string[]> {
-        logger.info(`Getting all tags`)
-
-        const uniqTags = {};
-
-        let lastEvaluatedKey = null;
-        do {
-            const scanParams: DocumentClient.ScanInput = {
-                TableName: this.articleTable,
-                AttributesToGet: ['tagList'],
-            };
-            
-            if (lastEvaluatedKey) {
-                scanParams.ExclusiveStartKey = lastEvaluatedKey;
-            }
-            
-            const data = await this.docClient.scan(scanParams).promise();
-            const items = data.Items as Article[];
-            items.forEach(item => {
-                if (item.tagList && item.tagList.values) {
-                    item.tagList.forEach(tag => uniqTags[tag] = 1);
-                }
-            });
-            lastEvaluatedKey = data.LastEvaluatedKey;
-        } while (lastEvaluatedKey);
-
-        const tags = Object.keys(uniqTags);
-
-        return tags;
     }
 }

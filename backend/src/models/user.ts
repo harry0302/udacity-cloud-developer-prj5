@@ -1,10 +1,10 @@
 export interface User {
-    userId: string
     email: string
     username: string
     bio: string
     image: string
     followers?: string[]
+    following?: string[]
     passwordHash: string
     createdAt?: string
     updatedAt: string

@@ -20,14 +20,15 @@ provider:
   environment:
     JWT_SECRET: hell0W0rd#kkwiernc!
     TOKEN_EXPIRATION: 1h
-    USERS_TABLE: Users-${self:provider.stage}
+    USERS_TABLE: Users-4-${self:provider.stage}
     USERS_BY_EMAIL_INDEX: UserEmailIndex
     USERS_BY_USERNAME_INDEX: UserUsernameIndex
-    ARTICLES_TABLE: Articles-${self:provider.stage}
+    ARTICLES_TABLE: Articles-4-${self:provider.stage}
     ARTICLES_BY_UPDATED_AT_INDEX: ArticleUpdatedAtIndex
     ARTICLES_BY_AUTHOR_INDEX: ArticleAuthorIndex
-    COMMENTS_TABLE: Comments-${self:provider.stage}
+    COMMENTS_TABLE: Comments-4-${self:provider.stage}
     COMMENTS_BY_ARTICLE_INDEX: CommentArticleIndex
+    TAGS_TABLE: Tags-4-${self:provider.stage}
     ATTACHMENT_S3_BUCKET: serverless-c5-harry0302-attachment-${self:provider.stage}
     SIGNED_URL_EXPIRATION: 300
   logs:
@@ -39,10 +40,10 @@ custom:
 
 functions:
   Auth:
-    handler: src/lambda/auth/jwtAuthorizer.handler
+    handler: src/security/jwtAuthorizer.handler
 
   Signup:
-    handler: src/lambda/http/signup.handler
+    handler: src/handler/auth.signup
     events:
       - http:
           method: POST
@@ -68,7 +69,7 @@ functions:
           - "*"
 
   Signin:
-    handler: src/lambda/http/signin.handler
+    handler: src/handler/auth.signin
     events:
       - http:
           method: POST
@@ -90,35 +91,12 @@ functions:
         Resource:
           - "*"
 
-  GetProfile:
-    handler: src/lambda/http/getProfile.handler
-    events:
-      - http:
-          method: GET
-          path: /api/profiles/{username}
-          cors: true
-    iamRoleStatements:
-      - Effect: "Allow"
-        Action:
-          - "dynamodb:Query"
-        Resource: "arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.USERS_TABLE}"
-      - Effect: Allow
-        Action:
-          - dynamodb:Query
-        Resource: "arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.USERS_TABLE}/index/*"
-      - Effect: "Allow"
-        Action:
-          - "xray:PutTraceSegments"
-          - "xray:PutTelemetryRecords"
-        Resource:
-          - "*"
-
   GetUser:
-    handler: src/lambda/http/getUser.handler
+    handler: src/handler/auth.getCurrentUserInfo
     events:
       - http:
           method: GET
-          path: /api/user
+          path: api/user
           cors: true
           authorizer: Auth
     iamRoleStatements:
@@ -137,12 +115,32 @@ functions:
           - "xray:PutTelemetryRecords"
         Resource:
           - "*"
+
+  GetProfile:
+    handler: src/handler/user.getProfile
+    events:
+      - http:
+          method: GET
+          path: api/profiles/{username}
+          cors: true
+    iamRoleStatements:
+      - Effect: "Allow"
+        Action:
+          - "dynamodb:GetItem"
+        Resource: "arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.USERS_TABLE}"
+      - Effect: "Allow"
+        Action:
+          - "xray:PutTraceSegments"
+          - "xray:PutTelemetryRecords"
+        Resource:
+          - "*"
+
   UpdateUser:
-    handler: src/lambda/http/updateUser.handler
+    handler: src/handler/auth.updateUser
     events:
       - http:
           method: PUT
-          path: /api/user
+          path: api/user
           cors: true
           authorizer: Auth
     iamRoleStatements:
@@ -165,23 +163,19 @@ functions:
           - "*"
 
   FollowUser:
-    handler: src/lambda/http/followUser.handler
+    handler: src/handler/user.followUser
     events:
       - http:
           method: POST
-          path: /api/profiles/{username}/follow
+          path: api/profiles/{username}/follow
           cors: true
           authorizer: Auth
     iamRoleStatements:
       - Effect: "Allow"
         Action:
-          - "dynamodb:Query"
-          - "dynamodb:UpdateItem"
+          - "dynamodb:GetItem"
+          - "dynamodb:PutItem"
         Resource: "arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.USERS_TABLE}"
-      - Effect: Allow
-        Action:
-          - dynamodb:Query
-        Resource: "arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.USERS_TABLE}/index/*"
       - Effect: "Allow"
         Action:
           - "xray:PutTraceSegments"
@@ -190,23 +184,19 @@ functions:
           - "*"
 
   UnfollowUser:
-    handler: src/lambda/http/unfollowUser.handler
+    handler: src/handler/user.unfollowUser
     events:
       - http:
           method: DELETE
-          path: /api/profiles/{username}/follow
+          path: api/profiles/{username}/follow
           cors: true
           authorizer: Auth
     iamRoleStatements:
       - Effect: "Allow"
         Action:
-          - "dynamodb:Query"
-          - "dynamodb:UpdateItem"
+          - "dynamodb:GetItem"
+          - "dynamodb:PutItem"
         Resource: "arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.USERS_TABLE}"
-      - Effect: Allow
-        Action:
-          - dynamodb:Query
-        Resource: "arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.USERS_TABLE}/index/*"
       - Effect: "Allow"
         Action:
           - "xray:PutTraceSegments"
@@ -215,11 +205,11 @@ functions:
           - "*"
 
   CreateArticle:
-    handler: src/lambda/http/createArticle.handler
+    handler: src/handler/article.createArticle
     events:
       - http:
           method: post
-          path: /api/articles
+          path: api/articles
           cors: true
           authorizer: Auth
     iamRoleStatements:
@@ -229,8 +219,13 @@ functions:
         Resource: "arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.ARTICLES_TABLE}"
       - Effect: Allow
         Action:
-          - dynamodb:Query
-        Resource: "arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.ARTICLES_TABLE}/index/*"
+          - dynamodb:GetItem
+          - dynamodb:PutItem
+        Resource: arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.TAGS_TABLE}
+      - Effect: "Allow"
+        Action:
+          - "dynamodb:GetItem"
+        Resource: "arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.USERS_TABLE}"
       - Effect: "Allow"
         Action:
           - "xray:PutTraceSegments"
@@ -239,7 +234,7 @@ functions:
           - "*"
   
   GenerateUploadUrl:
-    handler: src/lambda/http/generateUploadUrl.handler
+    handler: src/handler/file.generateUploadUrl
     events:
       - http:
           method: get
@@ -258,9 +253,9 @@ functions:
           - "xray:PutTelemetryRecords"
         Resource:
           - "*"
-  
+
   GetArticles:
-    handler: src/lambda/http/getArticles.handler
+    handler: src/handler/article.getArticles
     events:
       - http:
           method: get
@@ -277,13 +272,180 @@ functions:
         Resource: "arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.ARTICLES_TABLE}/index/*"
       - Effect: "Allow"
         Action:
+          - "dynamodb:GetItem"
+        Resource: "arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.USERS_TABLE}"
+      - Effect: Allow
+        Action:
+          - dynamodb:Query
+        Resource: "arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.USERS_TABLE}/index/*"
+      - Effect: "Allow"
+        Action:
+          - "xray:PutTraceSegments"
+          - "xray:PutTelemetryRecords"
+        Resource:
+          - "*"
+  GetArticlesFeed:
+    handler: src/handler/article.getArticlesFeed
+    events:
+      - http:
+          method: GET
+          path: /api/articles/feed
+          cors: true
+          authorizer: Auth
+    iamRoleStatements:
+      - Effect: Allow
+        Action:
+          - dynamodb:Query
+        Resource: arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.ARTICLES_TABLE}
+      - Effect: Allow
+        Action:
+          - dynamodb:Query
+        Resource: "arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.ARTICLES_TABLE}/index/*"
+      - Effect: "Allow"
+        Action:
+          - "dynamodb:GetItem"
+        Resource: "arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.USERS_TABLE}"
+      - Effect: Allow
+        Action:
+          - dynamodb:Query
+        Resource: "arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.USERS_TABLE}/index/*"
+      - Effect: "Allow"
+        Action:
+          - "xray:PutTraceSegments"
+          - "xray:PutTelemetryRecords"
+        Resource:
+          - "*"
+
+  GetArticle:
+    handler: src/handler/article.getArticle
+    events:
+      - http:
+          method: get
+          path: api/articles/{slug}
+          cors: true
+    iamRoleStatements:
+      - Effect: Allow
+        Action:
+          - dynamodb:GetItem
+        Resource: arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.ARTICLES_TABLE}
+      - Effect: "Allow"
+        Action:
+          - "dynamodb:GetItem"
+        Resource: "arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.USERS_TABLE}"
+      - Effect: "Allow"
+        Action:
+          - "xray:PutTraceSegments"
+          - "xray:PutTelemetryRecords"
+        Resource:
+          - "*"
+
+  UdpateArticle:
+    handler: src/handler/article.updateArticle
+    events:
+      - http:
+          method: PUT
+          path: api/articles/{slug}
+          cors: true
+          authorizer: Auth
+    iamRoleStatements:
+      - Effect: "Allow"
+        Action:
+          - "dynamodb:PutItem"
+          - "dynamodb:GetItem"
+        Resource: "arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.ARTICLES_TABLE}"
+      - Effect: Allow
+        Action:
+          - dynamodb:Query
+        Resource: "arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.ARTICLES_TABLE}/index/*"
+      - Effect: Allow
+        Action:
+          - dynamodb:GetItem
+          - dynamodb:PutItem
+        Resource: arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.TAGS_TABLE}
+      - Effect: "Allow"
+        Action:
+          - "dynamodb:GetItem"
+        Resource: "arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.USERS_TABLE}"
+      - Effect: "Allow"
+        Action:
+          - "xray:PutTraceSegments"
+          - "xray:PutTelemetryRecords"
+        Resource:
+          - "*"
+
+  DeleteArticle:
+    handler: src/handler/article.deleteArticle
+    events:
+      - http:
+          method: DELETE
+          path: api/articles/{slug}
+          cors: true
+          authorizer: Auth
+    iamRoleStatements:
+      - Effect: Allow
+        Action:
+          - dynamodb:GetItem
+          - dynamodb:DeleteItem
+        Resource: arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.ARTICLES_TABLE}
+      - Effect: "Allow"
+        Action:
+          - "xray:PutTraceSegments"
+          - "xray:PutTelemetryRecords"
+        Resource:
+          - "*"
+
+  FavoriteArticle:
+    handler: src/handler/article.favoriteArticle
+    events:
+      - http:
+          method: POST
+          path: /api/articles/{slug}/favorite
+          cors: true
+          authorizer: Auth
+    iamRoleStatements:
+      - Effect: Allow
+        Action:
+          - dynamodb:GetItem
+          - dynamodb:PutItem
+        Resource: arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.ARTICLES_TABLE}
+      - Effect: "Allow"
+        Action:
+          - "dynamodb:GetItem"
+        Resource: "arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.USERS_TABLE}"
+      - Effect: "Allow"
+        Action:
+          - "xray:PutTraceSegments"
+          - "xray:PutTelemetryRecords"
+        Resource:
+          - "*"
+
+  UnfavoriteArticle:
+    handler: src/handler/article.unfavoriteArticle
+    events:
+      - http:
+          method: DELETE
+          path: /api/articles/{slug}/favorite
+          cors: true
+          authorizer: Auth
+    iamRoleStatements:
+      - Effect: Allow
+        Action:
+          - dynamodb:GetItem
+          - dynamodb:PutItem
+        Resource: arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.ARTICLES_TABLE}
+      - Effect: "Allow"
+        Action:
+          - "dynamodb:GetItem"
+        Resource: "arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.USERS_TABLE}"
+      - Effect: "Allow"
+        Action:
           - "xray:PutTraceSegments"
           - "xray:PutTelemetryRecords"
         Resource:
           - "*"
 
   GetTags:
-    handler: src/lambda/http/getTags.handler
+    handler: src/handler/tag.getTags
     events:
       - http:
           method: GET
@@ -293,7 +455,30 @@ functions:
       - Effect: Allow
         Action:
           - dynamodb:Scan
-        Resource: arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.ARTICLES_TABLE}
+        Resource: arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.TAGS_TABLE}
+      - Effect: "Allow"
+        Action:
+          - "xray:PutTraceSegments"
+          - "xray:PutTelemetryRecords"
+        Resource:
+          - "*"
+  CreateComment:
+    handler: src/handler/comment.createComment
+    events:
+      - http:
+          method: POST
+          path: api/articles/{slug}/comments
+          cors: true
+          authorizer: Auth
+    iamRoleStatements:
+      - Effect: Allow
+        Action:
+          - dynamodb:PutItem
+        Resource: arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.COMMENTS_TABLE}
+      - Effect: "Allow"
+        Action:
+          - "dynamodb:GetItem"
+        Resource: "arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.USERS_TABLE}"
       - Effect: "Allow"
         Action:
           - "xray:PutTraceSegments"
@@ -301,6 +486,53 @@ functions:
         Resource:
           - "*"
 
+  GetComments:
+    handler: src/handler/comment.getCommentsBySlug
+    events:
+      - http:
+          method: GET
+          path: api/articles/{slug}/comments
+          cors: true
+    iamRoleStatements:
+      - Effect: Allow
+        Action:
+          - dynamodb:Query
+        Resource: arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.COMMENTS_TABLE}
+      - Effect: Allow
+        Action:
+          - dynamodb:Query
+        Resource: "arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.COMMENTS_TABLE}/index/*"
+      - Effect: "Allow"
+        Action:
+          - "dynamodb:GetItem"
+        Resource: "arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.USERS_TABLE}"
+      - Effect: "Allow"
+        Action:
+          - "xray:PutTraceSegments"
+          - "xray:PutTelemetryRecords"
+        Resource:
+          - "*"
+
+  DeleteComment:
+    handler: src/handler/comment.deleteComment
+    events:
+      - http:
+          method: DELETE
+          path: api/articles/{slug}/comments/{id}
+          cors: true
+    iamRoleStatements:
+      - Effect: Allow
+        Action:
+          - dynamodb:GetItem
+          - dynamodb:DeleteItem
+        Resource: arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.COMMENTS_TABLE}
+      - Effect: "Allow"
+        Action:
+          - "xray:PutTraceSegments"
+          - "xray:PutTelemetryRecords"
+        Resource:
+          - "*"
+    
 resources:
   Resources:
     GatewayResponseDefault4XX:
@@ -318,14 +550,12 @@ resources:
       Type: AWS::DynamoDB::Table
       Properties:
         AttributeDefinitions:
-          - AttributeName: userId
-            AttributeType: S
           - AttributeName: email
             AttributeType: S
           - AttributeName: username
             AttributeType: S
         KeySchema:
-          - AttributeName: userId
+          - AttributeName: username
             KeyType: HASH
         BillingMode: PAY_PER_REQUEST
         TableName: ${self:provider.environment.USERS_TABLE}
@@ -333,12 +563,6 @@ resources:
           - IndexName: ${self:provider.environment.USERS_BY_EMAIL_INDEX}
             KeySchema:
               - AttributeName: email
-                KeyType: HASH
-            Projection:
-              ProjectionType: ALL
-          - IndexName: ${self:provider.environment.USERS_BY_USERNAME_INDEX}
-            KeySchema:
-              - AttributeName: username
                 KeyType: HASH
             Projection:
               ProjectionType: ALL
@@ -365,7 +589,7 @@ resources:
             KeySchema:
               - AttributeName: author
                 KeyType: HASH
-              - AttributeName: updatedAt
+              - AttributeName: slug
                 KeyType: RANGE
             Projection:
               ProjectionType: ALL
@@ -382,28 +606,37 @@ resources:
       Type: AWS::DynamoDB::Table
       Properties:
         AttributeDefinitions:
+          - AttributeName: commentId
+            AttributeType: S
           - AttributeName: author
             AttributeType: S
           - AttributeName: slug
             AttributeType: S
-          - AttributeName: updatedAt
-            AttributeType: N  
         KeySchema:
-          - AttributeName: slug
+          - AttributeName: commentId
             KeyType: HASH
-          - AttributeName: author
-            KeyType: RANGE
         BillingMode: PAY_PER_REQUEST
         TableName: ${self:provider.environment.COMMENTS_TABLE}
         GlobalSecondaryIndexes:
           - IndexName: ${self:provider.environment.COMMENTS_BY_ARTICLE_INDEX}
             KeySchema:
-              - AttributeName: author
+              - AttributeName: slug
                 KeyType: HASH
-              - AttributeName: updatedAt
+              - AttributeName: author
                 KeyType: RANGE
             Projection:
               ProjectionType: ALL
+    TagsTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        AttributeDefinitions:
+          - AttributeName: tagName
+            AttributeType: S
+        KeySchema:
+          - AttributeName: tagName
+            KeyType: HASH
+        BillingMode: PAY_PER_REQUEST
+        TableName: ${self:provider.environment.TAGS_TABLE}
 
     AttachmentsBucket:
       Type: AWS::S3::Bucket

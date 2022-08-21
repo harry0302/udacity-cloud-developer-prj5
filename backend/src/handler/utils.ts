@@ -16,7 +16,7 @@ export function envelop(res: any, statusCode: number = 200): APIGatewayProxyResu
     if (statusCode == 200) {
         body = JSON.stringify(res);
     } else {
-        body = JSON.stringify({ errors: { body: [res] } });
+        body = JSON.stringify({ errors: res });
     }
 
     return {

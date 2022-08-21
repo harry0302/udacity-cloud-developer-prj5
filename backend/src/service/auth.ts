@@ -6,7 +6,6 @@ import { comparePassword, generatePassword } from "../security/utils";
 import { User } from "../models/user";
 import { SigninRequest } from "../request/signinRequest";
 import { ErrorREST } from '../utils/error';
-import { v4 as uuidv4 } from 'uuid';
 import { HttpStatusCode } from '../constants/httpStatusCode';
 
 const logger = createLogger('AuthService')
@@ -17,14 +16,14 @@ export async function signup(request: SignupRequest): Promise<User> {
 
     const userWithThisEmail = await userRepo.findByEmail(request.email);
     if (userWithThisEmail) {
-        logger.error(`Email already taken: [${request.email}]`);
-        throw new ErrorREST(HttpStatusCode.BadRequest, `Email already taken: [${request.email}]`);
+        logger.error(`Email already taken`, { email: request.email });
+        throw new ErrorREST(HttpStatusCode.BadRequest, { email: `already taken` });
     }
 
     const userWithThisUsername = await userRepo.findByUsername(request.username);
     if (userWithThisUsername) {
-        logger.error(`Username already taken: [${request.username}]`);
-        throw new ErrorREST(HttpStatusCode.BadRequest, `Username already taken: [${request.username}]`);
+        logger.error(`Username already taken`, { username: request.username });
+        throw new ErrorREST(HttpStatusCode.BadRequest, { username: `already taken` });
     }
 
     const hashedPassword = await generatePassword(request.password);
@@ -32,15 +31,15 @@ export async function signup(request: SignupRequest): Promise<User> {
     const now = new Date().toISOString();
 
     const newUser: User = {
-        userId: uuidv4(),
         passwordHash: hashedPassword,
         createdAt: now,
         updatedAt: now,
         email: request.email,
         username: request.username,
         bio: '',
-        image: '',
-        followers: []
+        image: 'https://api.realworld.io/images/smiley-cyrus.jpeg',
+        followers: [],
+        following: []
     };
 
     await userRepo.save(newUser);
@@ -52,14 +51,14 @@ export async function signin(request: SigninRequest): Promise<User> {
 
     const user = await userRepo.findByEmail(request.email);
     if (!user) {
-        logger.error(`Email not found: [${request.email}]`);
-        throw new ErrorREST(HttpStatusCode.BadRequest, `Email not found: [${request.email}]`);
+        logger.error(`Email not found`, { email: request.email });
+        throw new ErrorREST(HttpStatusCode.BadRequest, { email: `not found` });
     }
-    logger.info("Checking password")
+    logger.info("Checking password");
     const match = await comparePassword(request.password, user.passwordHash)
     if (!match) {
         logger.error(`Wrong password`)
-        throw new ErrorREST(HttpStatusCode.BadRequest, `Wrong password`)
+        throw new ErrorREST(HttpStatusCode.BadRequest, { password: `wrong` })
     }
 
     return user;
