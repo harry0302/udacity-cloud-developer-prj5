@@ -1,5 +1,5 @@
 import { Comment } from "../models/comment";
-import { CommentRepository } from "../repository/comment";
+import { CommentRepository } from "../dataLayer/comment";
 import { CreateCommentRequest } from "../request/createCommentRequest";
 import { createLogger } from "../utils/logger";
 import * as UserService from './user';

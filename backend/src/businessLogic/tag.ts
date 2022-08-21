@@ -1,5 +1,5 @@
 import { Tag } from "../models/tag";
-import { TagRepository } from "../repository/tag";
+import { TagRepository } from "../dataLayer/tag";
 import { createLogger } from "../utils/logger";
 
 const logger = createLogger('TagsService');

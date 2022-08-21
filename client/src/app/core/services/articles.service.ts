@@ -30,12 +30,12 @@ export class ArticlesService {
     );
   }
 
-  get(slug): Observable<Article> {
+  get(slug: string): Observable<Article> {
     return this.apiService.get('/articles/' + slug)
       .pipe(map(data => data.article));
   }
 
-  destroy(slug) {
+  destroy(slug: string) {
     return this.apiService.delete('/articles/' + slug);
   }
 
@@ -52,13 +52,19 @@ export class ArticlesService {
     }
   }
 
-  favorite(slug): Observable<Article> {
+  favorite(slug: string): Observable<Article> {
     return this.apiService.post('/articles/' + slug + '/favorite');
   }
 
-  unfavorite(slug): Observable<Article> {
+  unfavorite(slug: string): Observable<Article> {
     return this.apiService.delete('/articles/' + slug + '/favorite');
   }
 
+  getUploadUrl(slug: string): Observable<string> {
+    return this.apiService.get('/articles/' + slug + '/upload').pipe(map(data => data.url));
+  }
 
+  uploadFile(url: string, file: File) {
+    return this.apiService.putFile(url, file);
+  }
 }

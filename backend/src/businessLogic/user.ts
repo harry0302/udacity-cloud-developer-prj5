@@ -1,5 +1,5 @@
 import { HttpStatusCode } from "../constants/httpStatusCode";
-import { UserRepository } from "../repository/user";
+import { UserRepository } from "../dataLayer/user";
 import { User } from "../models/user";
 import { generatePassword } from "../security/utils";
 import { ErrorREST } from "../utils/error";

@@ -4,6 +4,13 @@ import { ActivatedRoute, Router } from '@angular/router';
 
 import { Article, ArticlesService } from '../core';
 
+enum UploadState {
+  NoUpload,
+  FetchingPresignedUrl,
+  UploadingFile,
+  UploadedFile,
+}
+
 @Component({
   selector: 'app-editor-page',
   templateUrl: './editor.component.html',
@@ -15,6 +22,7 @@ export class EditorComponent implements OnInit {
   tagField = new FormControl();
   errors: Object = {};
   isSubmitting = false;
+  uploadState = UploadState.NoUpload;
 
   constructor(
     private articlesService: ArticlesService,
@@ -27,7 +35,8 @@ export class EditorComponent implements OnInit {
     this.articleForm = this.fb.group({
       title: '',
       description: '',
-      body: ''
+      body: '',
+      file: null,
     });
 
     // Initialized tagList as empty array
@@ -46,6 +55,38 @@ export class EditorComponent implements OnInit {
         this.cd.markForCheck();
       }
     });
+  }
+
+  onFileSelected(event) {
+
+    const file: File = event.target.files[0];
+
+    if (file) {
+      this.isSubmitting = true;
+      this.uploadState = UploadState.FetchingPresignedUrl;
+      this.cd.markForCheck();
+      this.articlesService.getUploadUrl(this.article.slug).subscribe(url => {
+        this.uploadState = UploadState.UploadingFile;
+        this.cd.markForCheck();
+        this.articlesService.uploadFile(url, file).subscribe(() => {
+          this.uploadState = UploadState.UploadedFile;
+          this.isSubmitting = false;
+          this.cd.markForCheck();
+        },
+        err => {
+          this.uploadState = UploadState.NoUpload;
+          this.errors = {errors: {image: `server busy`}};
+          this.isSubmitting = false;
+          this.cd.markForCheck();
+        });
+      },
+      err => {
+        this.uploadState = UploadState.NoUpload;
+        this.errors = {errors: {image: `server cannot get url info`}};
+        this.isSubmitting = false;
+        this.cd.markForCheck();
+      });
+    }
   }
 
   trackByFn(index, item) {
@@ -72,6 +113,10 @@ export class EditorComponent implements OnInit {
 
     // update the model
     this.updateArticle(this.articleForm.value);
+
+    if (!this.article.hasImage) {
+      this.article.hasImage = this.uploadState === UploadState.UploadedFile;
+    }
 
     // post the changes
     this.articlesService.save(this.article).subscribe(

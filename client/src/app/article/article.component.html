@@ -3,7 +3,6 @@
   <div class="banner">
     <div class="container">
       <h1>{{ article.title }}</h1>
-
       <app-article-meta [article]="article">
 
           <span [hidden]="!canModify">
@@ -40,8 +39,7 @@
 
     <div class="row article-content">
       <div class="col-md-12">
-
-        <div [innerHTML]="article.body | markdown"></div>
+        <div [innerHTML]="article.body"></div>
 
         <ul class="tag-list">
           <li *ngFor="let tag of article.tagList; trackBy: trackByFn"
@@ -50,6 +48,7 @@
           </li>
         </ul>
 
+        <div *ngIf="article.hasImage"><img [src]="article.image" /></div>
       </div>
     </div>
 

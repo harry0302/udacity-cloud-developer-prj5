@@ -1,6 +1,6 @@
 import 'source-map-support/register'
 import { Tag } from '../models/tag'
-import { client } from '../utils/dynamoDBClient'
+import { client } from '../utils/dynamoDBHelper'
 import { createLogger } from '../utils/logger'
 
 const logger = createLogger('TagRepository')

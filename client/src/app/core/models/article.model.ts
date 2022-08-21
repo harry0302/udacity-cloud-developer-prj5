@@ -9,6 +9,7 @@ export interface Article {
   createdAt: string;
   updatedAt: string;
   favorited: boolean;
+  hasImage: boolean;
   favoritesCount: number;
   author: Profile;
 }

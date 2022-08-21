@@ -1,7 +1,7 @@
 import 'source-map-support/register'
 import { CustomAuthorizerEvent, CustomAuthorizerResult } from 'aws-lambda'
-import { createLogger } from '../utils/logger'
-import { getJwtPayload, getToken } from './utils'
+import { createLogger } from '../../utils/logger'
+import { getJwtPayload, getToken } from '../../security/utils'
 
 const logger = createLogger('auth')
 

@@ -1,6 +1,6 @@
 import 'source-map-support/register';
 import { Article } from '../models/article';
-import { ArticleRepository } from '../repository/article';
+import { ArticleRepository } from '../dataLayer/article';
 import { createLogger } from '../utils/logger';
 import { CreateArticleRequest } from '../request/createArticleRequest';
 import { UpdateArticleRequest } from '../request/updateArticleRequest';
@@ -9,6 +9,7 @@ import { HttpStatusCode } from '../constants/httpStatusCode';
 import slugify from 'slugify';
 import * as TagService from './tag';
 import * as UserService from './user';
+import { getGetSignedUrl } from '../utils/s3Helper';
 
 const logger = createLogger('ArticlesService');
 
@@ -37,6 +38,8 @@ export interface ArticleWithAuthorInfo {
     updatedAt?: number
     favorited: boolean
     favoritesCount: number
+    hasImage: boolean
+    image?: string
 }
 
 export async function getArticles(input: getArticlesInput): Promise<ArticleWithAuthorInfo[]> {
@@ -54,13 +57,8 @@ export async function getArticles(input: getArticlesInput): Promise<ArticleWithA
 
 export async function getArticlesFeed(currentUser: string): Promise<ArticleWithAuthorInfo[]> {
     logger.info(`Retrieving all articles feed by user ${currentUser}`);
-    const user = await UserService.getUserByUsername(currentUser);
 
-    if (!user.following || user.following.length == 0) {
-        return [];
-    }
-
-    const items = await articleRepo.findByAuthorIn(user.following);
+    const items = await articleRepo.findByAuthor(currentUser);
 
     const articlePromises = [];
 
@@ -68,6 +66,18 @@ export async function getArticlesFeed(currentUser: string): Promise<ArticleWithA
 
     const articles = await Promise.all(articlePromises);
     return articles;
+}
+
+export async function existsArticleBySlug(slug: string): Promise<boolean> {
+    logger.info(`Checking exist article ${slug}`);
+
+    const item = await articleRepo.findBySlug(slug);
+
+    if (!item) {
+        return false;
+    }
+
+    return true;
 }
 
 export async function getArticleBySlug(slug: string, currentUser?: string): Promise<ArticleWithAuthorInfo> {
@@ -99,7 +109,8 @@ export async function createArticle(currentUser: string, request: CreateArticleR
         tagList: request.tagList,
         favoritedBy: [],
         favoritesCount: 0,
-        dummy: 'OK'
+        dummy: 'OK',
+        hasImage: request.hasImage,
     };
 
     logger.info(`Creating article ${slug} for user ${currentUser}`, { username: currentUser, slug, article: newItem });
@@ -138,13 +149,14 @@ export async function updateArticle(currentUser: string, slug: string, request: 
     item.body = request.body;
     item.description = request.description;
     item.updatedAt = (new Date()).getTime();
-    item.tagList = request.tagList;
+    item.tagList = request.tagList || [];
+    item.hasImage = request.hasImage;
 
     await articleRepo.update(item);
 
     if (isUpdateTagList) {
-        for (let index = 0; index < request.tagList.length; index++) {
-            const tagName = request.tagList[index];
+        for (let index = 0; index < item.tagList.length; index++) {
+            const tagName = item.tagList[index];
             await TagService.createTag({
                 tagName: tagName,
             })
@@ -210,7 +222,7 @@ export async function unfavoriteArticle(currentUser: string, slug: string): Prom
 
     article.favoritedBy = article.favoritedBy.filter(
         e => (e !== currentUser));
-    
+
     article.favoritesCount = article.favoritedBy.length;
 
     await articleRepo.update(article);
@@ -220,6 +232,7 @@ export async function unfavoriteArticle(currentUser: string, slug: string): Prom
 
 async function mapArticleWithAuthorInfo(article: Article, currentUser?: string): Promise<ArticleWithAuthorInfo> {
     const user = await UserService.getUserByUsername(article.author, currentUser);
+
     var res: ArticleWithAuthorInfo = {
         slug: article.slug,
         author: {
@@ -235,8 +248,13 @@ async function mapArticleWithAuthorInfo(article: Article, currentUser?: string):
         title: article.title,
         tagList: article.tagList,
         favorited: false,
+        hasImage: article.hasImage,
         favoritesCount: article.favoritesCount,
     };
+
+    if (article.hasImage) {
+        res.image = getGetSignedUrl(res.slug);
+    }
 
     if (article.favoritedBy && currentUser) {
         res.favorited = article.favoritedBy

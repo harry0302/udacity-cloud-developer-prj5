@@ -1,9 +1,8 @@
 import { DocumentClient } from 'aws-sdk/clients/dynamodb';
 import 'source-map-support/register';
 import { Article } from '../models/article';
-import { client } from '../utils/dynamoDBClient';
+import { client, queryAll } from '../utils/dynamoDBHelper';
 import { createLogger } from '../utils/logger';
-import { queryAll } from './utils';
 
 const logger = createLogger('ArticleRepository');
 

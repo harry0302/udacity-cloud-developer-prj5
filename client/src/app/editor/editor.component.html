@@ -46,6 +46,16 @@
               </div>
             </fieldset>
 
+            <fieldset *ngIf="article.slug" class="form-group">
+              <input hidden formControlName="hasImage" />
+              <input class="form-control"
+                formControlName="file"
+                type="file"
+                (change)="onFileSelected($event)" />
+              <p *ngIf="uploadState === 1">Uploading image metadata</p>
+              <p *ngIf="uploadState === 2">Uploading file</p>
+            </fieldset>
+
             <button class="btn btn-lg pull-xs-right btn-primary" type="button" (click)="submitForm()">
               Publish Article
             </button>

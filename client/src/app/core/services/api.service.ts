@@ -1,9 +1,11 @@
 import { Injectable } from '@angular/core';
 import { environment } from '../../../environments/environment';
-import { HttpHeaders, HttpClient, HttpParams } from '@angular/common/http';
-import { Observable ,  throwError } from 'rxjs';
+import { HttpClient, HttpParams } from '@angular/common/http';
+import { Observable, throwError } from 'rxjs';
+import { from } from 'rxjs';
 
 import { catchError } from 'rxjs/operators';
+import Axios from 'axios';
 
 @Injectable({
   providedIn: 'root'
@@ -11,10 +13,10 @@ import { catchError } from 'rxjs/operators';
 export class ApiService {
   constructor(
     private http: HttpClient
-  ) {}
+  ) { }
 
   private formatErrors(error: any) {
-    return  throwError(error.error);
+    return throwError(error.error);
   }
 
   get(path: string, params: HttpParams = new HttpParams()): Observable<any> {
@@ -27,6 +29,10 @@ export class ApiService {
       `${environment.api_url}${path}`,
       JSON.stringify(body)
     ).pipe(catchError(this.formatErrors));
+  }
+
+  putFile(url: string, file: File): Observable<any> {
+    return from(Axios.put(url, file, {headers: {"content-type": undefined}})).pipe(catchError(this.formatErrors));
   }
 
   post(path: string, body: Object = {}): Observable<any> {

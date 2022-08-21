@@ -1,6 +1,6 @@
 import 'source-map-support/register'
 import { SignupRequest } from "../request/signupRequest";
-import { UserRepository } from "../repository/user";
+import { UserRepository } from "../dataLayer/user";
 import { createLogger } from "../utils/logger";
 import { comparePassword, generatePassword } from "../security/utils";
 import { User } from "../models/user";

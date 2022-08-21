@@ -6,4 +6,5 @@ export interface CreateArticleRequest {
     description: string
     body: string
     tagList: string[]
+    hasImage: boolean
 }

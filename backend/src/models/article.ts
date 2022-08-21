@@ -10,4 +10,5 @@ export interface Article {
   createdAt?: number
   updatedAt?: number
   dummy: string
+  hasImage?: boolean
 }

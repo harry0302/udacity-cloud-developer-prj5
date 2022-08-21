@@ -1,6 +1,6 @@
 import 'source-map-support/register'
 import { User } from '../models/user'
-import { client } from '../utils/dynamoDBClient'
+import { client } from '../utils/dynamoDBHelper'
 import { createLogger } from '../utils/logger'
 
 const logger = createLogger('UserRepository')

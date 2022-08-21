@@ -1,5 +1,5 @@
 import { Comment } from '../models/comment';
-import { client } from '../utils/dynamoDBClient';
+import { client } from '../utils/dynamoDBHelper';
 import { createLogger } from '../utils/logger';
 
 const logger = createLogger('CommentRepository');
