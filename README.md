@@ -1,11 +1,11 @@
-# Udacity - Cloud Developer Nanodegree Project 4
+# Udacity - Cloud Developer Nanodegree Capstone Project
 
 ## Functionality of the application
 
-The application allows creating/removing/updating/fetching TODO items. Each TODO item can optionally have an attachment image. Each user only has access to TODO items that he/she has created.
+The application allows creating/removing/updating/fetching article items.
 
 <div align="center">
-  <img src="./screenshots/todo_app.jpg" alt="Todo App" style="zoom:40%;" />
+  <img src="./screenshots/application.jpg" alt="App" style="zoom:40%;" />
 </div>
 
 ***
@@ -14,45 +14,30 @@ The application allows creating/removing/updating/fetching TODO items. Each TODO
 
 The following lambda functions have been implemented (and set up in serverless.yml):
 - Auth: Lambda authorizer (formerly custom authorizer)
-- GetTodos: retrieves all or filter by name todos for
-- GetTodo: retrieves one todo (by id)
-- CreateTodo: creates a new todo item
-- UpdateTodo: updates a todo item
-- DeleteTodo: removes a todo item
-- GenerateUploadUrl: returns a signed url for uploading an image file to AWS S3
+- GetArticles: retrieves all article
+- GetArticle: retrieves one article (by slug)
+- CreateArticle: creates a new article item
+- UpdateArticle: updates a article item
+- DeleteArticle: removes a article item
+- GetTags: retrieves all tag
+- Signin: login to already have account
+- Signup: register new account
+- GetCurrentUserInfo: retrieve a current user logged
+- GetProfile: retrieve one user profile by username
+- GetComments: retrieve all comment of one article by slug
+- CreateComment: creates a new comment item
+- DeleteComment: removes a comment item
 
-The JSON shape of a todo item
-```
-  {
-    "todoId": "123",
-    "createdAt": "2019-07-27T20:01:45.424Z",
-    "name": "Buy milk",
-    "dueDate": "2019-07-29T20:01:45.424Z",
-    "done": false,
-    "attachmentUrl": "http://example.com/image.png"
-  }
-```
 All functions are already connected to appropriate events from API Gateway.
-An id of a user can be extracted from a JWT token passed by a client.
-
-Authentication is implemented with Auth0 (using asymmetrically encrypted JWT tokens).
+An username of a user can be extracted from a JWT token passed by a client.
 
 ***
 ## Frontend
 
-The `client` folder contains a web application that can use the API that should be developed in the project. The apiId binding in `config.ts` should be set to the correct value.
-
-This file configures your client application just as it was done in the course and contains an API endpoint and Auth0 configuration:
+The `client` folder contains a web application that can use the API that should be developed in the project. The API_ROOT binding in `agent.ts` should be set to the correct value.
 
 ```ts
-const apiId = '...' API Gateway id
-export const apiEndpoint = `https://${apiId}.execute-api.us-east-1.amazonaws.com/dev`
-
-export const authConfig = {
-  domain: '...',    // Domain from Auth0
-  clientId: '...',  // Client id from an Auth0 application
-  callbackUrl: 'http://localhost:3000/callback'
-}
+const API_ROOT = '...' API Gateway URL
 ```
 
 ***
@@ -72,7 +57,7 @@ sls deploy -v
 
 ## Frontend
 
-To run a client application first edit the `client/src/config.ts` file to set correct parameters. And then run the following commands:
+To run a client application first edit the `client/src/agent.ts` file to set correct parameters. And then run the following commands:
 
 ```
 cd client
@@ -80,7 +65,7 @@ npm install
 npm run start
 ```
 
-This should start a development server with the React application that will interact with the serverless TODO application.
+This should start a development server with the React application that will interact with the serverless Article application.
 
 ***
 
@@ -114,15 +99,7 @@ logger.info('User was authorized', {
 ```
 
 <div align="center">
-  <img src="./screenshots/log_example(DeleteTodo).jpg" alt="DeleteTodo log" style="zoom:40%;" />
+  <img src="./screenshots/log_example(CreateArticle).jpg" alt="DeleteTodo log" style="zoom:40%;" />
 </div>
 
 ***
-
-## Postman collection
-
-An alternative way to test your API, you can use the Postman collection that contains sample requests. You can find a Postman collection in this project.
-
-<div align="center">
-  <img src="./screenshots/Postman.jpg" alt="Postman" style="zoom:40%;" />
-</div>
