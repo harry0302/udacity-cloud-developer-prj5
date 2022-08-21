@@ -75,7 +75,7 @@ This should start a development server with the React application that will inte
 X-Ray tracing has been set up
 
 <div align="center">
-  <img src="./screenshots/X-RAY.jpg" alt="1. X-Ray of the app" style="zoom:40%;" />
+  <img src="./screenshots/X-RAY2.jpg" alt="1. X-Ray of the app" style="zoom:40%;" />
 </div>
 
 ## Logging
@@ -83,7 +83,7 @@ X-Ray tracing has been set up
 The starter code came with a configured [Winston](https://github.com/winstonjs/winston) logger that creates [JSON formatted](https://stackify.com/what-is-structured-logging-and-why-developers-need-it/) log statements. It is used to write log messages like this:
 
 <div align="center">
-  <img src="./screenshots/CloudWatch.jpg" alt="CloudWatch logs" style="zoom:40%;" />
+  <img src="./screenshots/CloudWatch2.jpg" alt="CloudWatch logs" style="zoom:40%;" />
 </div>
 
 ```ts
