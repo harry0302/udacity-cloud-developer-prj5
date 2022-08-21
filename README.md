@@ -99,7 +99,7 @@ logger.info('User was authorized', {
 ```
 
 <div align="center">
-  <img src="./screenshots/log_example(CreateArticle).jpg" alt="DeleteTodo log" style="zoom:40%;" />
+  <img src="./screenshots/log_example(CreateArticle).jpg" alt="CreateArticle log" style="zoom:40%;" />
 </div>
 
 ***
