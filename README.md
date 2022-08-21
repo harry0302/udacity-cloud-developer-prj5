@@ -34,10 +34,13 @@ An username of a user can be extracted from a JWT token passed by a client.
 ***
 ## Frontend
 
-The `client` folder contains a web application that can use the API that should be developed in the project. The API_ROOT binding in `agent.ts` should be set to the correct value.
+The `client` folder contains a web application that can use the API that should be developed in the project. The api_url binding in `environment.ts` and `environment.prod.ts` should be set to the correct value.
 
 ```ts
-const API_ROOT = '...' API Gateway URL
+export const environment = {
+  production: true,
+  api_url: '.....' ## API Gateway URL
+};
 ```
 
 ***
@@ -57,7 +60,7 @@ sls deploy -v
 
 ## Frontend
 
-To run a client application first edit the `client/src/agent.ts` file to set correct parameters. And then run the following commands:
+To run a client application first edit the `client/src/environments/environment.ts` and `client/src/environments/environment.prod.ts` file to set correct parameters. And then run the following commands:
 
 ```
 cd client
@@ -65,7 +68,7 @@ npm install
 npm run start
 ```
 
-This should start a development server with the React application that will interact with the serverless Article application.
+This should start a development server with the Angular application that will interact with the serverless Article application.
 
 ***
 
